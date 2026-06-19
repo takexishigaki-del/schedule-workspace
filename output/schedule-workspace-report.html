@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta name="googlebot" content="noindex, nofollow">
+  <meta property="og:title" content="個人スケジュール管理ワークスペース — 機能レポート & フェーズ2ロードマップ">
+  <meta property="og:description" content="4ペイン構成のスケジュール・タスク管理ツールの実装機能と今後の開発計画を図解します。">
+  <meta property="og:type" content="article">
+  <title>個人スケジュール管理ワークスペース — 機能レポート & フェーズ2ロードマップ</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23FFFFFF'/><rect x='8' y='8' width='84' height='84' rx='14' fill='none' stroke='%233B82F6' stroke-width='4'/><circle cx='32' cy='40' r='10' fill='%233B82F6' opacity='0.8'/><circle cx='68' cy='40' r='10' fill='%2360A5FA' opacity='0.8'/><rect x='25' y='62' width='50' height='6' rx='3' fill='%2394A3B8' opacity='0.6'/><rect x='30' y='74' width='40' height='6' rx='3' fill='%2394A3B8' opacity='0.3'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ads: {
+              bg: '#FFFFFF',
+              surface: '#F8FAFC',
+              hover: '#F1F5F9',
+              border: '#E2E8F0',
+              accent: '#3B82F6',
+              'accent-light': '#2563EB',
+              text: '#1E293B',
+              muted: '#64748B',
+              dim: '#94A3B8',
+              positive: '#10B981',
+              negative: '#EF4444',
+              warning: '#F59E0B',
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans JP"', '"Hiragino Sans"', '"Hiragino Kaku Gothic ProN"', '"Yu Gothic UI"', '"Meiryo"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { border-top: none !important; }
+      .rounded-xl { break-inside: avoid; }
+      .md\:flex-row { flex-direction: row !important; }
+      .md\:hidden { display: none !important; }
+      .hidden.md\:block { display: block !important; }
+      .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      .sm\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+      .md\:mb-20 { margin-bottom: 5rem !important; }
+      .md\:py-16 { padding-top: 4rem !important; padding-bottom: 4rem !important; }
+      .bg-clip-text.text-transparent {
+        -webkit-background-clip: initial !important;
+        background-clip: initial !important;
+        color: #2563EB !important;
+        -webkit-text-fill-color: #2563EB !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-ads-bg text-slate-600 antialiased leading-relaxed border-t-4 border-ads-accent">
+  <div class="no-print max-w-3xl mx-auto px-5 pt-2 flex justify-end">
+    <button onclick="window.print()" class="flex items-center gap-1.5 text-xs text-ads-dim hover:text-ads-accent transition-colors cursor-pointer">
+      <i data-lucide="download" class="w-3.5 h-3.5"></i>
+      PDF
+    </button>
+  </div>
+  <main class="max-w-3xl mx-auto px-5 py-10 md:py-16">
+<!-- CONTENT_START -->
+
+<!-- ============================================================ -->
+<!--  HERO                                                        -->
+<!-- ============================================================ -->
+<div class="text-center mb-8 md:mb-10">
+  <div class="inline-flex items-center gap-2 bg-ads-accent/10 text-ads-accent-light px-4 py-1.5 rounded-full text-sm font-medium mb-6">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+    プロダクト開発レポート
+  </div>
+  <h1 class="text-2xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">
+    個人スケジュール管理<br>
+    <span class="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">4ペインワークスペース</span>
+  </h1>
+  <p class="text-base text-ads-muted max-w-xl mx-auto leading-relaxed">
+    フェーズ1の実装機能と工夫した点、そして今後のフェーズ2計画を一枚で整理します。
+  </p>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  PURPOSE: このアプリを作った理由                              -->
+<!-- ============================================================ -->
+<div class="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl p-7 md:p-10 mb-6 text-white">
+  <div class="flex items-center gap-2 mb-5 opacity-80">
+    <i data-lucide="quote" class="w-5 h-5"></i>
+    <span class="text-sm font-medium uppercase tracking-widest">このアプリを作った理由</span>
+  </div>
+  <p class="text-lg md:text-xl font-bold leading-relaxed mb-6">
+    スケジュールとタスク管理が同時にできることで、<br class="hidden md:block">
+    単にやらないといけない事や予定をこなすだけで<br class="hidden md:block">
+    時間が奪われ、そこから解放された時に、<br class="hidden md:block">
+    <span class="underline decoration-white/60 underline-offset-4">仕事の本流、いわゆるクリエーティブな時間に<br class="hidden md:block">戻りやすくすることを目的に作ったアプリです。</span>
+  </p>
+
+  <!-- 3つのキーワード -->
+  <div class="flex flex-wrap gap-3">
+    <div class="flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2.5">
+      <i data-lucide="check-circle" class="w-4 h-4 text-white/80"></i>
+      <div>
+        <div class="text-xs font-bold text-white">こなす時間を最小化</div>
+        <div class="text-[11px] text-white/70">予定・タスクを素早く処理</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2.5">
+      <i data-lucide="unlock" class="w-4 h-4 text-white/80"></i>
+      <div>
+        <div class="text-xs font-bold text-white">管理業務から解放</div>
+        <div class="text-[11px] text-white/70">1画面で完結、切り替え不要</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2.5">
+      <i data-lucide="sparkles" class="w-4 h-4 text-white/80"></i>
+      <div>
+        <div class="text-xs font-bold text-white">クリエーティブへ戻る</div>
+        <div class="text-[11px] text-white/70">アイデア壁打ちですぐ深掘り</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 目的を図解: 時間の流れ -->
+<div class="bg-ads-surface border border-ads-border rounded-2xl p-5 md:p-7 mb-6">
+  <p class="text-xs font-semibold text-ads-dim uppercase tracking-widest text-center mb-5">1日の時間の使い方が変わる</p>
+  <div class="flex flex-col md:flex-row items-center gap-3 justify-center">
+
+    <!-- Before -->
+    <div class="flex-1 border border-ads-border rounded-xl overflow-hidden">
+      <div class="bg-red-500/10 px-4 py-2 border-b border-ads-border">
+        <div class="flex items-center gap-2 text-xs font-bold text-red-700">
+          <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>従来の管理方法
+        </div>
+      </div>
+      <div class="p-4 flex flex-col gap-2 text-xs">
+        <div class="flex items-center gap-2 bg-red-50 rounded-lg px-3 py-2 text-red-800">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 flex-shrink-0 opacity-60"></i>
+          カレンダーアプリを開く
+        </div>
+        <div class="flex justify-center text-ads-dim"><i data-lucide="arrow-down" class="w-3.5 h-3.5"></i></div>
+        <div class="flex items-center gap-2 bg-red-50 rounded-lg px-3 py-2 text-red-800">
+          <i data-lucide="list" class="w-3.5 h-3.5 flex-shrink-0 opacity-60"></i>
+          タスク管理アプリを開く
+        </div>
+        <div class="flex justify-center text-ads-dim"><i data-lucide="arrow-down" class="w-3.5 h-3.5"></i></div>
+        <div class="flex items-center gap-2 bg-red-50 rounded-lg px-3 py-2 text-red-800">
+          <i data-lucide="file-text" class="w-3.5 h-3.5 flex-shrink-0 opacity-60"></i>
+          メモアプリを開く
+        </div>
+        <div class="flex justify-center text-ads-dim"><i data-lucide="arrow-down" class="w-3.5 h-3.5"></i></div>
+        <div class="flex items-center gap-2 bg-red-50 rounded-lg px-3 py-2 text-red-800">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5 flex-shrink-0 opacity-60"></i>
+          また最初に戻る…
+        </div>
+        <div class="mt-2 pt-2 border-t border-red-200 text-center text-red-600 font-medium text-[11px]">
+          切り替えるたびに集中が途切れる
+        </div>
+      </div>
+    </div>
+
+    <!-- 矢印 -->
+    <div class="flex items-center justify-center text-ads-accent">
+      <i data-lucide="arrow-right" class="w-6 h-6 hidden md:block"></i>
+      <i data-lucide="arrow-down" class="w-6 h-6 md:hidden"></i>
+    </div>
+
+    <!-- After -->
+    <div class="flex-1 border border-blue-300/50 rounded-xl overflow-hidden">
+      <div class="bg-blue-500/10 px-4 py-2 border-b border-blue-300/30">
+        <div class="flex items-center gap-2 text-xs font-bold text-blue-700">
+          <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>このアプリ
+        </div>
+      </div>
+      <div class="p-4 flex flex-col gap-2 text-xs">
+        <div class="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2 text-blue-800">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          P1 でカレンダーを確認
+        </div>
+        <div class="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2 text-blue-800">
+          <i data-lucide="list-checks" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          P2 で今日のタスクを処理
+        </div>
+        <div class="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2 text-blue-800">
+          <i data-lucide="file-text" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          P3 で詳細を確認・編集
+        </div>
+        <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-300/40 rounded-lg px-3 py-2 text-emerald-800 font-medium">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          P4 でアイデア・創造へ！
+        </div>
+        <div class="mt-2 pt-2 border-t border-blue-200 text-center text-blue-600 font-medium text-[11px]">
+          同じ画面のまま、フローが途切れない
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p class="text-center text-ads-muted mb-10 text-sm">
+  実際の画面と、各ペインの機能をひとつずつ見ていきます。
+</p>
+
+
+<!-- ============================================================ -->
+<!--  ACTUAL SCREENSHOT                                            -->
+<!-- ============================================================ -->
+<div class="mb-6">
+  <p class="text-xs font-semibold text-ads-dim uppercase tracking-widest text-center mb-4">実際の画面（Windows）</p>
+
+  <!-- Windows ブラウザ風フレーム -->
+  <div class="rounded-xl overflow-hidden border border-slate-300 shadow-lg">
+    <!-- タイトルバー -->
+    <div class="flex items-center gap-0 bg-slate-800 px-0">
+      <!-- タブバー -->
+      <div class="flex items-end px-3 pt-1.5 gap-1 flex-1 overflow-hidden">
+        <div class="flex items-center gap-1.5 bg-white/90 rounded-t-md px-3 py-1.5 text-[10px] text-slate-700 font-medium shrink-0">
+          <i data-lucide="layout-dashboard" class="w-3 h-3 text-blue-500"></i>
+          採用管理ツール ワークスペース
+        </div>
+        <div class="flex items-center gap-1 bg-white/10 rounded-t-md px-2 py-1.5 text-[10px] text-slate-400 shrink-0">
+          Gemini に相談
+        </div>
+      </div>
+      <!-- ウィンドウコントロール -->
+      <div class="flex shrink-0 px-2">
+        <div class="flex items-center gap-0">
+          <div class="w-8 h-7 flex items-center justify-center hover:bg-white/10">
+            <i data-lucide="minus" class="w-3 h-3 text-slate-400"></i>
+          </div>
+          <div class="w-8 h-7 flex items-center justify-center hover:bg-white/10">
+            <i data-lucide="square" class="w-3 h-3 text-slate-400"></i>
+          </div>
+          <div class="w-8 h-7 flex items-center justify-center hover:bg-red-500">
+            <i data-lucide="x" class="w-3 h-3 text-slate-400"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- アドレスバー -->
+    <div class="bg-slate-700 px-3 py-1.5 flex items-center gap-2">
+      <div class="flex gap-1">
+        <div class="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10">
+          <i data-lucide="chevron-left" class="w-3 h-3 text-slate-400"></i>
+        </div>
+        <div class="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10">
+          <i data-lucide="chevron-right" class="w-3 h-3 text-slate-300"></i>
+        </div>
+        <div class="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10">
+          <i data-lucide="refresh-cw" class="w-3 h-3 text-slate-400"></i>
+        </div>
+      </div>
+      <div class="flex-1 bg-slate-600/50 rounded-full px-3 py-1 text-[10px] text-slate-300 flex items-center gap-1.5">
+        <i data-lucide="lock" class="w-2.5 h-2.5 text-emerald-400"></i>
+        localhost:3000
+      </div>
+    </div>
+    <!-- スクリーンショット本体 -->
+    <img
+      src="screenshot.png"
+      alt="個人スケジュール管理ワークスペース — 実際の画面"
+      class="w-full block"
+    >
+  </div>
+
+  <!-- ペインラベル -->
+  <div class="grid grid-cols-4 gap-2 mt-3">
+    <div class="text-center text-[11px]">
+      <div class="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-full px-2 py-1 text-slate-600">
+        <i data-lucide="calendar" class="w-3 h-3"></i>P1 カレンダー
+      </div>
+    </div>
+    <div class="text-center text-[11px]">
+      <div class="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-full px-2 py-1 text-blue-700">
+        <i data-lucide="list-checks" class="w-3 h-3"></i>P2 今日
+      </div>
+    </div>
+    <div class="text-center text-[11px]">
+      <div class="inline-flex items-center gap-1 bg-purple-50 border border-purple-200 rounded-full px-2 py-1 text-purple-700">
+        <i data-lucide="file-text" class="w-3 h-3"></i>P3 詳細
+      </div>
+    </div>
+    <div class="text-center text-[11px]">
+      <div class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-full px-2 py-1 text-amber-700">
+        <i data-lucide="sparkles" class="w-3 h-3"></i>P4 アイデア
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 1: P1 カレンダーペイン                               -->
+<!-- ============================================================ -->
+<section class="mb-14 md:mb-16">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 flex-shrink-0">
+      <i data-lucide="calendar" class="w-5 h-5 text-slate-600"></i>
+    </div>
+    <div>
+      <div class="text-xs text-ads-dim font-medium mb-0.5">Pane 1</div>
+      <h2 class="text-lg md:text-xl font-bold text-slate-900">カレンダー・プロジェクト・タグ</h2>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <!-- 複数ドット -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="circle-dot" class="w-4 h-4 text-blue-500"></i>
+        <h3 class="font-bold text-slate-900 text-sm">優先度別・複数ドット表示</h3>
+      </div>
+      <p class="text-xs text-ads-muted leading-relaxed mb-3">同じ日に複数の予定があっても統合せず、最大3個まで個別のドットで表示。優先度の高い順（赤→青→グレー）で並ぶ。</p>
+      <div class="flex items-center gap-3 bg-white border border-ads-border rounded-lg px-4 py-3">
+        <div class="text-center">
+          <div class="text-xs text-slate-500 mb-1.5">19</div>
+          <div class="flex gap-0.5 justify-center">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+          </div>
+        </div>
+        <div class="text-[11px] text-ads-muted leading-relaxed">高優先1件＋通常2件 → 赤1個＋青2個で区別して表示</div>
+      </div>
+    </div>
+
+    <!-- 複数日バー -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="calendar-range" class="w-4 h-4 text-blue-500"></i>
+        <h3 class="font-bold text-slate-900 text-sm">複数日イベントを横線バーで表示</h3>
+      </div>
+      <p class="text-xs text-ads-muted leading-relaxed mb-3">出張・旅行など連続する予定は色ドットではなく、カレンダー上で横線が繋がって表示される。</p>
+      <div class="flex items-center bg-white border border-ads-border rounded-lg px-4 py-3 gap-1 text-center text-xs">
+        <div class="flex flex-col items-center">
+          <span class="text-slate-500 text-[10px] mb-1">22</span>
+          <div class="relative w-full h-4">
+            <div class="absolute left-1/2 right-0 top-1/2 h-0.5 bg-blue-400/60 rounded-l"></div>
+          </div>
+        </div>
+        <div class="flex flex-col items-center">
+          <span class="text-slate-500 text-[10px] mb-1">23</span>
+          <div class="w-full h-0.5 bg-blue-400/60 mt-2"></div>
+        </div>
+        <div class="flex flex-col items-center">
+          <span class="text-slate-500 text-[10px] mb-1">24</span>
+          <div class="relative w-full h-4">
+            <div class="absolute left-0 right-1/2 top-1/2 h-0.5 bg-blue-400/60 rounded-r"></div>
+          </div>
+        </div>
+        <div class="ml-2 text-[10px] text-ads-muted leading-relaxed">出張（3日間）が一目でわかる</div>
+      </div>
+    </div>
+
+    <!-- プロジェクト -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="folder-open" class="w-4 h-4 text-emerald-500"></i>
+        <h3 class="font-bold text-slate-900 text-sm">プロジェクト管理</h3>
+      </div>
+      <p class="text-xs text-ads-muted leading-relaxed mb-3">プロジェクトを自由名称で作成。クリックで P3 に詳細（概要・目標・期限・画像・URL）を表示し、インラインで直接編集できる。</p>
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center gap-2 bg-white border border-ads-border rounded-lg px-3 py-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+          <span class="text-xs text-slate-700">Q3 営業プロジェクト</span>
+        </div>
+        <div class="flex items-center gap-2 bg-white border border-ads-border rounded-lg px-3 py-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span class="text-xs text-slate-700">UI リニューアル</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- タグ -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="tag" class="w-4 h-4 text-purple-500"></i>
+        <h3 class="font-bold text-slate-900 text-sm">グローバルタグクラウド</h3>
+      </div>
+      <p class="text-xs text-ads-muted leading-relaxed mb-3">最大20個まで自由入力でタグを作成。予定・タスク・アイデアすべてに共通のタグを付けて横断管理できる。</p>
+      <div class="flex flex-wrap gap-1.5">
+        <span class="px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50 text-[11px] text-blue-700">重要</span>
+        <span class="px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50 text-[11px] text-slate-600">プライベート</span>
+        <span class="px-2.5 py-1 rounded-full border border-amber-300 bg-amber-50 text-[11px] text-amber-700">出張</span>
+        <span class="px-2.5 py-1 rounded-full border border-emerald-300 bg-emerald-50 text-[11px] text-emerald-700">企画</span>
+        <span class="px-2.5 py-1 rounded-full border border-purple-300 bg-purple-50 text-[11px] text-purple-700">デザイン</span>
+        <span class="px-2.5 py-1 rounded-full border border-red-300 bg-red-50 text-[11px] text-red-700">開発</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 2: P2 今日のタスク                                   -->
+<!-- ============================================================ -->
+<section class="mb-14 md:mb-16">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 flex-shrink-0">
+      <i data-lucide="list-checks" class="w-5 h-5 text-blue-600"></i>
+    </div>
+    <div>
+      <div class="text-xs text-ads-dim font-medium mb-0.5">Pane 2</div>
+      <h2 class="text-lg md:text-xl font-bold text-slate-900">今日の予定 & タスク</h2>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+    <div class="flex gap-3 bg-ads-surface border border-ads-border rounded-xl p-4">
+      <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="clock" class="w-4 h-4 text-blue-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 text-sm mb-1">現在時刻リアルタイム表示</h3>
+        <p class="text-xs text-ads-muted leading-relaxed">「今日」の隣に日本時間の HH:MM を1分ごとに自動更新。等幅フォントで数字がずれない。</p>
+      </div>
+    </div>
+
+    <div class="flex gap-3 bg-ads-surface border border-ads-border rounded-xl p-4">
+      <div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="alert-circle" class="w-4 h-4 text-red-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 text-sm mb-1">高優先度の赤マーカー</h3>
+        <p class="text-xs text-ads-muted leading-relaxed">優先度「高」の予定には赤い点マーカーを表示。一目で重要度が伝わるデザイン。</p>
+      </div>
+    </div>
+
+    <div class="flex gap-3 bg-ads-surface border border-ads-border rounded-xl p-4">
+      <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="check-square" class="w-4 h-4 text-emerald-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 text-sm mb-1">完了チェック＋取り消し線</h3>
+        <p class="text-xs text-ads-muted leading-relaxed">チェックボックスで完了にすると取り消し線と透明度低下で「完了感」を演出。削除せず残る。</p>
+      </div>
+    </div>
+
+    <div class="flex gap-3 bg-ads-surface border border-ads-border rounded-xl p-4">
+      <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="image" class="w-4 h-4 text-cyan-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 text-sm mb-1">画像ドラッグ＆ドロップ添付</h3>
+        <p class="text-xs text-ads-muted leading-relaxed">予定・タスクのカード上に画像ファイルをドロップすると、添付されてサムネイル表示される。</p>
+      </div>
+    </div>
+
+    <div class="flex gap-3 bg-ads-surface border border-ads-border rounded-xl p-4">
+      <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="grip-vertical" class="w-4 h-4 text-amber-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 text-sm mb-1">タスクをプロジェクトへD&D</h3>
+        <p class="text-xs text-ads-muted leading-relaxed">タスクカードをドラッグして P3 のプロジェクト詳細にドロップすると、自動的に紐付けられる。</p>
+      </div>
+    </div>
+
+    <div class="flex gap-3 bg-ads-surface border border-ads-border rounded-xl p-4">
+      <div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="copy" class="w-4 h-4 text-purple-600"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 text-sm mb-1">コピー・複製</h3>
+        <p class="text-xs text-ads-muted leading-relaxed">予定・タスクのカードをワンクリックで複製。定例会議の登録などに便利。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 参加者自動補完 -->
+  <div class="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+    <div class="flex items-start gap-3">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 flex-shrink-0 mt-0.5">
+        <i data-lucide="user-plus" class="w-4 h-4 text-blue-600"></i>
+      </div>
+      <div>
+        <p class="font-bold text-blue-700 mb-1 text-sm">参加者の自動補完（コンタクトマスタ）</p>
+        <p class="text-ads-muted leading-relaxed text-xs">一度入力した人の名前と連絡先（メール/電話）を自動的に記憶。次回から名前を入力すると連絡先が自動入力される。アプリ独自のコンタクトデータベースとして機能する。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 3: P3 詳細ペイン                                     -->
+<!-- ============================================================ -->
+<section class="mb-14 md:mb-16">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-50 flex-shrink-0">
+      <i data-lucide="file-text" class="w-5 h-5 text-purple-600"></i>
+    </div>
+    <div>
+      <div class="text-xs text-ads-dim font-medium mb-0.5">Pane 3</div>
+      <h2 class="text-lg md:text-xl font-bold text-slate-900">詳細表示 & インライン編集</h2>
+    </div>
+  </div>
+
+  <p class="mb-5 text-sm leading-relaxed">
+    P3 はクリックしたその場で編集できる「インライン編集」を全フィールドに採用。モーダルや「編集ボタン」は一切使わず、シームレスに情報を更新できる。
+  </p>
+
+  <!-- 4種類の詳細ビュー -->
+  <div class="bg-ads-surface border border-ads-border rounded-xl p-5 mb-5">
+    <p class="text-xs font-semibold text-ads-dim uppercase tracking-widest mb-4">選択した種類によって表示が切り替わる</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-white border border-ads-border rounded-lg p-3 text-center">
+        <i data-lucide="calendar-clock" class="w-5 h-5 text-blue-500 mx-auto mb-2"></i>
+        <div class="text-xs font-bold text-slate-800 mb-1">予定の詳細</div>
+        <div class="text-[10px] text-ads-muted leading-relaxed">日時範囲・場所・参加者・メモ・画像</div>
+      </div>
+      <div class="bg-white border border-ads-border rounded-lg p-3 text-center">
+        <i data-lucide="check-square" class="w-5 h-5 text-emerald-500 mx-auto mb-2"></i>
+        <div class="text-xs font-bold text-slate-800 mb-1">タスクの詳細</div>
+        <div class="text-[10px] text-ads-muted leading-relaxed">日付・プロジェクト・優先度・画像</div>
+      </div>
+      <div class="bg-white border border-ads-border rounded-lg p-3 text-center">
+        <i data-lucide="folder-open" class="w-5 h-5 text-amber-500 mx-auto mb-2"></i>
+        <div class="text-xs font-bold text-slate-800 mb-1">プロジェクト</div>
+        <div class="text-[10px] text-ads-muted leading-relaxed">目標・URL・紐付きタスク&amp;アイデア</div>
+      </div>
+      <div class="bg-white border border-ads-border rounded-lg p-3 text-center">
+        <i data-lucide="sparkles" class="w-5 h-5 text-purple-500 mx-auto mb-2"></i>
+        <div class="text-xs font-bold text-slate-800 mb-1">アイデア</div>
+        <div class="text-[10px] text-ads-muted leading-relaxed">内容編集・AI応答・カテゴリ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- プロジェクト詳細のD&D受け口 -->
+  <div class="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
+    <div class="flex items-start gap-3">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-500/10 flex-shrink-0 mt-0.5">
+        <i data-lucide="move" class="w-4 h-4 text-amber-600"></i>
+      </div>
+      <div>
+        <p class="font-bold text-amber-700 mb-1 text-sm">プロジェクト詳細はD&Dの受け口になる</p>
+        <p class="text-ads-muted leading-relaxed text-xs">プロジェクト詳細を P3 に表示した状態で、P2 のタスクカードや P4 のアイデアカードをドラッグしてドロップすると、自動的にプロジェクトに紐付けられる。X ボタンで解除も可能。</p>
+        <div class="flex gap-2 mt-3 flex-wrap">
+          <span class="flex items-center gap-1 bg-white border border-amber-200 text-amber-700 rounded-full px-2.5 py-1 text-[11px]">
+            <i data-lucide="grip-vertical" class="w-3 h-3"></i>P2 タスク
+          </span>
+          <i data-lucide="arrow-right" class="w-4 h-4 text-amber-400 self-center"></i>
+          <span class="flex items-center gap-1 bg-white border border-amber-200 text-amber-700 rounded-full px-2.5 py-1 text-[11px]">
+            <i data-lucide="folder" class="w-3 h-3"></i>プロジェクトへ紐付け
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 4: P4 アイデア壁打ち                                 -->
+<!-- ============================================================ -->
+<section class="mb-14 md:mb-16">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-50 flex-shrink-0">
+      <i data-lucide="sparkles" class="w-5 h-5 text-amber-600"></i>
+    </div>
+    <div>
+      <div class="text-xs text-ads-dim font-medium mb-0.5">Pane 4</div>
+      <h2 class="text-lg md:text-xl font-bold text-slate-900">アイデア壁打ち — 管理から創造へのブリッジ</h2>
+    </div>
+  </div>
+
+  <p class="mb-5 text-sm leading-relaxed">
+    P2 でタスクを片付けたあと、そのままの画面で P4 のアイデア壁打ちへ移行できる。「こなす仕事が終わったら、すぐクリエーティブな時間に入れる」という設計思想の中核。
+  </p>
+
+  <!-- 2モード比較 -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+    <!-- 通常モード -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl overflow-hidden">
+      <div class="bg-slate-700 px-4 py-2.5 flex items-center gap-2">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-400"></i>
+        <span class="text-xs text-white font-medium">通常モード — 汎用相談・調査</span>
+      </div>
+      <div class="p-4">
+        <p class="text-xs text-ads-muted leading-relaxed mb-3">調べもの・文章生成・アイデア出しに使う。APIキーを設定すると実際のAI（OpenAI等）と接続できる。</p>
+        <div class="space-y-2">
+          <div class="bg-blue-500 text-white rounded-xl rounded-tr-sm px-3 py-2 ml-6 text-xs">新しい顧客獲得の施策を考えたい</div>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl rounded-tl-sm px-3 py-2 mr-6 text-xs text-slate-700">市場トレンドとも合致しています。まずユーザーインタビューで仮説を裏付けましょう。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 壁打ちモード -->
+    <div class="bg-ads-surface border border-ads-border rounded-xl overflow-hidden">
+      <div class="bg-amber-600 px-4 py-2.5 flex items-center gap-2">
+        <span class="text-sm">🔥</span>
+        <span class="text-xs text-white font-medium">壁打ちモード — 5段階インタビュー</span>
+      </div>
+      <div class="p-4">
+        <p class="text-xs text-ads-muted leading-relaxed mb-3">アイデアを5つの質問で深掘りする、ビジネスアイデアの具体化に特化したモード。</p>
+        <div class="space-y-1.5">
+          <div class="flex items-start gap-2 text-[11px]">
+            <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center flex-shrink-0 text-[10px]">1</span>
+            <span class="text-ads-muted pt-0.5">誰のためのもの？（ターゲット）</span>
+          </div>
+          <div class="flex items-start gap-2 text-[11px]">
+            <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center flex-shrink-0 text-[10px]">2</span>
+            <span class="text-ads-muted pt-0.5">最大の課題と代替手段は？</span>
+          </div>
+          <div class="flex items-start gap-2 text-[11px]">
+            <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center flex-shrink-0 text-[10px]">3</span>
+            <span class="text-ads-muted pt-0.5">問題解決後の理想状態は？</span>
+          </div>
+          <div class="flex items-start gap-2 text-[11px]">
+            <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center flex-shrink-0 text-[10px]">4</span>
+            <span class="text-ads-muted pt-0.5">自分の強みと差別化は？</span>
+          </div>
+          <div class="flex items-start gap-2 text-[11px]">
+            <span class="w-5 h-5 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center flex-shrink-0 text-[10px]">5</span>
+            <span class="text-slate-700 font-medium pt-0.5">今週できる最小の一歩は？</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-3 bg-ads-surface border border-ads-border rounded-xl p-4">
+    <div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+      <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-purple-600"></i>
+    </div>
+    <div>
+      <h3 class="font-bold text-slate-900 text-sm mb-1">保存済みアイデア → P3 でクリック編集</h3>
+      <p class="text-xs text-ads-muted leading-relaxed">AI との会話を保存すると下部リストに一覧表示される。カードをクリックすると P3 にアイデア詳細が表示され、内容の修正・プロジェクト紐付け・タグ付けができる。カードをドラッグすると P3 のプロジェクトへ紐付けも可能。</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 5: 工夫した技術ポイント                              -->
+<!-- ============================================================ -->
+<section class="mb-14 md:mb-16">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-ads-accent/10 flex-shrink-0">
+      <i data-lucide="zap" class="w-5 h-5 text-ads-accent-light"></i>
+    </div>
+    <h2 class="text-lg md:text-xl font-bold text-slate-900">工夫した技術ポイント</h2>
+  </div>
+
+  <div class="space-y-4">
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="layers" class="w-5 h-5 text-blue-600"></i>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-bold text-slate-900 mb-2">ドラッグ&ドロップの2層設計</h3>
+          <p class="text-sm text-ads-muted leading-relaxed mb-3">同じカードで「画像ファイルのドロップ（カードへの添付）」と「要素のドラッグ（プロジェクトへの紐付け）」の2種類が共存。<code class="bg-slate-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">dataTransfer.types</code> でファイルか要素かを判別して衝突を回避している。</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-3 text-xs">
+              <div class="font-medium text-cyan-700 mb-1">画像ファイルドロップ</div>
+              <div class="text-ads-muted">PCの画像ファイルをカードへ → Base64変換 → 添付・表示</div>
+            </div>
+            <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 text-xs">
+              <div class="font-medium text-amber-700 mb-1">要素のドラッグ</div>
+              <div class="text-ads-muted">タスク/アイデアカードをドラッグ → P3プロジェクトにドロップ → 紐付け</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="edit-3" class="w-5 h-5 text-emerald-600"></i>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-bold text-slate-900 mb-2">モーダルなしのインライン編集</h3>
+          <p class="text-sm text-ads-muted leading-relaxed mb-3">「鉛筆ボタン式」や「モーダルポップアップ式」を使わず、フィールドをクリックした瞬間に入力できる UX を全フィールドに徹底。<code class="bg-slate-100 text-emerald-700 px-1.5 py-0.5 rounded text-xs">InlineTextField</code> プリミティブを共通化。</p>
+          <div class="flex gap-3 text-xs">
+            <div class="flex-1 bg-red-500/5 border border-red-500/20 rounded-lg p-2.5">
+              <div class="text-red-600 font-medium mb-1 flex items-center gap-1"><i data-lucide="x" class="w-3 h-3"></i>使わない方法</div>
+              <div class="text-ads-muted">鉛筆アイコンをクリック → 編集モーダルが開く → 保存ボタン</div>
+            </div>
+            <div class="flex-1 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2.5">
+              <div class="text-emerald-600 font-medium mb-1 flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i>採用した方法</div>
+              <div class="text-ads-muted">テキストをクリック → 即入力可能 → Enter/Blur で自動保存</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="calendar" class="w-5 h-5 text-purple-600"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 mb-2">カレンダードット: Context + カスタムDayButton</h3>
+          <p class="text-sm text-ads-muted leading-relaxed">react-day-picker の <code class="bg-slate-100 text-purple-700 px-1.5 py-0.5 rounded text-xs">DayButton</code> をカスタマイズし、React Context 経由で「日付→ドット配列」の辞書を渡す設計。30日分すべてのセルに対して O(1) で色・個数を参照できるため、予定が増えても描画が重くならない。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-lg bg-slate-500/10 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="palette" class="w-5 h-5 text-slate-600"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 mb-2">意味的カラートークンによるテーマ管理</h3>
+          <p class="text-sm text-ads-muted leading-relaxed"><code class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-xs">bg-blue-500</code> のような色番号は一切使わず、<code class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-xs">bg-primary</code> 等のトークンのみ使用。フォントは Noto Sans JP + Plus Jakarta Sans の組み合わせで日本語の可読性を高めた。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 6: Phase 2 ロードマップ                              -->
+<!-- ============================================================ -->
+<section class="mb-14 md:mb-16">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-50 flex-shrink-0">
+      <i data-lucide="map" class="w-5 h-5 text-emerald-600"></i>
+    </div>
+    <h2 class="text-lg md:text-xl font-bold text-slate-900">フェーズ2 ロードマップ</h2>
+  </div>
+
+  <p class="text-sm text-ads-muted mb-6 leading-relaxed">
+    フェーズ1はブラウザ内ローカルで動作する完全なプロトタイプを構築した。フェーズ2では「クラウド化・外部連携・AI実接続」の3本柱で実用レベルに引き上げる。
+  </p>
+
+  <!-- 現状の制約 -->
+  <div class="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5 mb-8">
+    <p class="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+      <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+      フェーズ1の現在の制約（フェーズ2での解消ポイント）
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div class="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2">
+        <i data-lucide="hard-drive" class="w-3.5 h-3.5 flex-shrink-0"></i>
+        データがブラウザ内のみ（他端末で見れない）
+      </div>
+      <div class="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2">
+        <i data-lucide="user-x" class="w-3.5 h-3.5 flex-shrink-0"></i>
+        認証なし（誰でも同じデータにアクセス）
+      </div>
+      <div class="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2">
+        <i data-lucide="bot" class="w-3.5 h-3.5 flex-shrink-0"></i>
+        AIはモック応答のみ（実 API 未接続）
+      </div>
+      <div class="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2">
+        <i data-lucide="calendar-x" class="w-3.5 h-3.5 flex-shrink-0"></i>
+        Google カレンダー・外部ツール未連携
+      </div>
+    </div>
+  </div>
+
+  <!-- ステップタイムライン -->
+  <div class="relative pl-6 space-y-0">
+    <div class="absolute left-2 top-0 bottom-0 w-0.5 bg-ads-border"></div>
+
+    <!-- Step 1 -->
+    <div class="relative mb-8">
+      <div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center">
+        <span class="text-[9px] font-black text-white">1</span>
+      </div>
+      <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="database" class="w-4 h-4 text-blue-600"></i>
+          <h3 class="font-bold text-slate-900 text-sm">バックエンド & 認証の基盤整備</h3>
+          <span class="ml-auto text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">最優先</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="flex items-start gap-1.5 text-xs text-ads-muted"><i data-lucide="check" class="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0"></i><span>Supabase 導入（DB + 認証）</span></div>
+          <div class="flex items-start gap-1.5 text-xs text-ads-muted"><i data-lucide="check" class="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0"></i><span>Google / メールログイン</span></div>
+          <div class="flex items-start gap-1.5 text-xs text-ads-muted"><i data-lucide="check" class="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0"></i><span>localStorage → Supabase DB 移行</span></div>
+          <div class="flex items-start gap-1.5 text-xs text-ads-muted"><i data-lucide="check" class="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0"></i><span>Row Level Security 設定</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="relative mb-8">
+      <div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center">
+        <span class="text-[9px] font-black text-white">2</span>
+      </div>
+      <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="calendar-sync" class="w-4 h-4 text-emerald-600"></i>
+          <h3 class="font-bold text-slate-900 text-sm">Google カレンダー連携</h3>
+        </div>
+        <p class="text-xs text-ads-muted leading-relaxed mb-3">Google Calendar API（OAuth）でイベントを双方向同期。このアプリで作成した予定が Google カレンダーにも反映される。</p>
+        <div class="flex items-center gap-2 bg-white border border-emerald-200 rounded-lg px-3 py-2 text-xs">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-500"></i>
+          <span class="text-slate-600">Google カレンダー</span>
+          <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-emerald-400 mx-1"></i>
+          <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 text-blue-500"></i>
+          <span class="text-slate-600">このアプリ（P1）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="relative mb-8">
+      <div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-purple-500 border-2 border-white flex items-center justify-center">
+        <span class="text-[9px] font-black text-white">3</span>
+      </div>
+      <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="mail" class="w-4 h-4 text-purple-600"></i>
+          <h3 class="font-bold text-slate-900 text-sm">外部メッセージ連携（Chatwork / Gmail）</h3>
+        </div>
+        <p class="text-xs text-ads-muted leading-relaxed mb-3">Chatwork API または Gmail API（Route Handler 経由）でメンション・重要メールを P2 下部に表示。API トークンを Supabase Secrets に保管して安全に管理。</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-white border border-purple-200 rounded-lg p-3 text-xs">
+            <div class="font-medium text-purple-700 mb-1">Chatwork</div>
+            <div class="text-ads-muted">API トークン1つで接続。@メンションのみ表示。</div>
+          </div>
+          <div class="bg-white border border-purple-200 rounded-lg p-3 text-xs">
+            <div class="font-medium text-purple-700 mb-1">Gmail</div>
+            <div class="text-ads-muted">Google OAuth で「重要・未読」のみ取得してP2に表示。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="relative mb-8">
+      <div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-amber-500 border-2 border-white flex items-center justify-center">
+        <span class="text-[9px] font-black text-white">4</span>
+      </div>
+      <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="bot" class="w-4 h-4 text-amber-600"></i>
+          <h3 class="font-bold text-slate-900 text-sm">実 AI 接続（OpenAI / Gemini / Claude）</h3>
+        </div>
+        <p class="text-xs text-ads-muted leading-relaxed mb-3">現在モック応答の P4 に実際の AI API を接続。<code class="bg-slate-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px]">/api/chat</code> Route Handler を作成し、ストリーミングで文字が流れるリアルタイム UX を実現。壁打ちモードは会話履歴を context に含めた連続対話に進化させる。</p>
+        <div class="flex gap-2 flex-wrap">
+          <span class="flex items-center gap-1 border border-amber-200 bg-amber-50 text-amber-700 rounded-full px-2.5 py-1 text-[11px]"><i data-lucide="zap" class="w-3 h-3"></i>OpenAI GPT-4o</span>
+          <span class="flex items-center gap-1 border border-blue-200 bg-blue-50 text-blue-700 rounded-full px-2.5 py-1 text-[11px]"><i data-lucide="sparkles" class="w-3 h-3"></i>Google Gemini</span>
+          <span class="flex items-center gap-1 border border-purple-200 bg-purple-50 text-purple-700 rounded-full px-2.5 py-1 text-[11px]"><i data-lucide="cpu" class="w-3 h-3"></i>Claude（Anthropic）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="relative">
+      <div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-slate-400 border-2 border-white flex items-center justify-center">
+        <span class="text-[9px] font-black text-white">5</span>
+      </div>
+      <div class="bg-ads-surface border border-ads-border rounded-xl p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="star" class="w-4 h-4 text-slate-500"></i>
+          <h3 class="font-bold text-slate-900 text-sm">UX 仕上げ & デプロイ</h3>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="flex items-center gap-1.5 text-xs text-ads-muted"><i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i>地図表示（場所フィールドから）</div>
+          <div class="flex items-center gap-1.5 text-xs text-ads-muted"><i data-lucide="bell" class="w-3 h-3 text-slate-400"></i>予定リマインダー通知</div>
+          <div class="flex items-center gap-1.5 text-xs text-ads-muted"><i data-lucide="smartphone" class="w-3 h-3 text-slate-400"></i>モバイル対応 / PWA化</div>
+          <div class="flex items-center gap-1.5 text-xs text-ads-muted"><i data-lucide="download" class="w-3 h-3 text-slate-400"></i>データエクスポート（JSON/CSV）</div>
+          <div class="flex items-center gap-1.5 text-xs text-ads-muted"><i data-lucide="rocket" class="w-3 h-3 text-slate-400"></i>Vercel CI/CD デプロイ</div>
+          <div class="flex items-center gap-1.5 text-xs text-ads-muted"><i data-lucide="image" class="w-3 h-3 text-slate-400"></i>画像を Supabase Storage へ移行</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!--  まとめ                                                       -->
+<!-- ============================================================ -->
+<section>
+  <div class="text-center bg-gradient-to-b from-blue-500/5 to-transparent border border-blue-500/10 rounded-2xl p-8 md:p-10">
+    <i data-lucide="layout-dashboard" class="w-8 h-8 text-ads-accent mx-auto mb-4"></i>
+    <p class="text-base font-bold text-slate-900 mb-3">
+      「こなす時間を最小化して、<br>クリエーティブな時間を最大化する」
+    </p>
+    <p class="text-ads-muted max-w-lg mx-auto leading-relaxed text-sm mb-6">
+      4つのペインが1画面に並ぶことで、カレンダー・タスク・詳細・アイデアの間をアプリを切り替えることなく移動できる。管理業務から解放されたあと、そのままの画面でクリエーティブな思考へ移行する — それがこのアプリの本質的な価値。
+    </p>
+    <div class="flex flex-wrap justify-center gap-2">
+      <span class="flex items-center gap-1.5 bg-white border border-ads-border rounded-full px-3 py-1.5 text-xs text-slate-600">
+        <i data-lucide="triangle" class="w-3 h-3 text-slate-800"></i>Next.js 16
+      </span>
+      <span class="flex items-center gap-1.5 bg-white border border-ads-border rounded-full px-3 py-1.5 text-xs text-slate-600">
+        <i data-lucide="atom" class="w-3 h-3 text-blue-500"></i>React 19
+      </span>
+      <span class="flex items-center gap-1.5 bg-white border border-ads-border rounded-full px-3 py-1.5 text-xs text-slate-600">
+        <i data-lucide="code-2" class="w-3 h-3 text-blue-700"></i>TypeScript
+      </span>
+      <span class="flex items-center gap-1.5 bg-white border border-ads-border rounded-full px-3 py-1.5 text-xs text-slate-600">
+        <i data-lucide="wind" class="w-3 h-3 text-cyan-500"></i>Tailwind CSS v4
+      </span>
+      <span class="flex items-center gap-1.5 bg-white border border-ads-border rounded-full px-3 py-1.5 text-xs text-slate-600">
+        <i data-lucide="component" class="w-3 h-3 text-slate-600"></i>shadcn/ui
+      </span>
+      <span class="flex items-center gap-1.5 bg-white border border-ads-border rounded-full px-3 py-1.5 text-xs text-slate-600">
+        <i data-lucide="hard-drive" class="w-3 h-3 text-emerald-600"></i>Supabase（フェーズ2）
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- CONTENT_END -->
+  </main>
+  <footer class="max-w-3xl mx-auto px-5 pb-10 pt-6 border-t border-ads-border/30">
+    <p class="text-xs text-ads-dim text-center">AI-Driven School の図解ツールで作成</p>
+  </footer>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

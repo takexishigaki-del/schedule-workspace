@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,8 @@ type AddItemDialogProps = {
   fieldLabel: string;
   fieldId: string;
   placeholder: string;
+  /** 編集モード時に初期値として表示するテキスト */
+  defaultValue?: string;
   onAdd: (name: string) => void;
 };
 
@@ -34,9 +36,15 @@ export function AddItemDialog({
   fieldLabel,
   fieldId,
   placeholder,
+  defaultValue,
   onAdd,
 }: AddItemDialogProps) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultValue ?? "");
+
+  // ダイアログが開くたびに初期値をセット
+  useEffect(() => {
+    if (open) setName(defaultValue ?? ""); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [open, defaultValue]);
 
   const handleSubmit = () => {
     const trimmed = name.trim();
@@ -46,12 +54,14 @@ export function AddItemDialog({
     onOpenChange(false);
   };
 
+  const isEditMode = defaultValue !== undefined;
+
   return (
     <Dialog
       open={open}
       onOpenChange={(v) => {
         onOpenChange(v);
-        if (!v) setName("");
+        if (!v) setName(defaultValue ?? "");
       }}
     >
       <DialogContent className="sm:max-w-sm">
@@ -77,7 +87,7 @@ export function AddItemDialog({
         <DialogFooter>
           <DialogClose render={<Button variant="outline">キャンセル</Button>} />
           <Button onClick={handleSubmit} disabled={!name.trim()}>
-            追加
+            {isEditMode ? "保存" : "追加"}
           </Button>
         </DialogFooter>
       </DialogContent>

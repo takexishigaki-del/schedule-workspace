@@ -1,0 +1,178 @@
+{
+  "schedules": [
+    {
+      "id": "s-1",
+      "title": "チームミーティング",
+      "date": "2026-06-18",
+      "startTime": "09:00",
+      "endTime": "10:00",
+      "location": "会議室A / Zoom",
+      "note": "週次進捗確認。スライドを事前に準備すること。",
+      "priority": "high",
+      "done": false,
+      "attendees": [
+        { "name": "田中 誠", "contact": "tanaka@example.com" },
+        { "name": "佐藤 花子", "contact": "090-1234-5678" }
+      ],
+      "tags": ["仕事", "ミーティング"]
+    },
+    {
+      "id": "s-2",
+      "title": "ランチ ＠ 丸の内",
+      "date": "2026-06-18",
+      "startTime": "12:00",
+      "endTime": "13:00",
+      "location": "丸の内ビル B1F レストラン",
+      "imageUrl": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80",
+      "note": "クライアントと会食。名刺を持参する。",
+      "priority": "medium",
+      "done": false,
+      "attendees": [
+        { "name": "山田 太郎", "contact": "yamada@client.co.jp" }
+      ],
+      "tags": ["会食"]
+    },
+    {
+      "id": "s-3",
+      "title": "デザインレビュー",
+      "date": "2026-06-18",
+      "startTime": "15:00",
+      "endTime": "16:30",
+      "location": "Figma / オンライン",
+      "note": "新機能 UI の最終確認。フィードバックをまとめる。",
+      "priority": "high",
+      "done": false,
+      "attendees": [
+        { "name": "佐藤 花子", "contact": "090-1234-5678" },
+        { "name": "鈴木 デザイナー", "contact": "suzuki@example.com" }
+      ],
+      "tags": ["仕事", "デザイン"]
+    },
+    {
+      "id": "s-4",
+      "title": "大阪出張",
+      "date": "2026-06-22",
+      "endDate": "2026-06-24",
+      "startTime": "08:00",
+      "endTime": "20:00",
+      "location": "大阪オフィス / 梅田",
+      "note": "Q3 商談ラウンド。宿泊先：グランフロント大阪",
+      "priority": "high",
+      "done": false,
+      "attendees": [
+        { "name": "田中 誠", "contact": "tanaka@example.com" }
+      ],
+      "tags": ["出張", "仕事"]
+    },
+    {
+      "id": "s-5",
+      "title": "1on1（部長）",
+      "date": "2026-06-19",
+      "startTime": "10:00",
+      "endTime": "10:30",
+      "location": "役員室",
+      "note": "Q3 目標の進捗報告",
+      "priority": "high",
+      "done": false,
+      "attendees": [
+        { "name": "山本 部長", "contact": "yamamoto@example.com" }
+      ],
+      "tags": ["仕事"]
+    },
+    {
+      "id": "s-6",
+      "title": "プロダクト定例",
+      "date": "2026-06-20",
+      "startTime": "14:00",
+      "endTime": "15:00",
+      "location": "Zoom",
+      "priority": "medium",
+      "done": false,
+      "attendees": [
+        { "name": "田中 誠", "contact": "tanaka@example.com" },
+        { "name": "佐藤 花子", "contact": "090-1234-5678" }
+      ],
+      "tags": ["仕事", "ミーティング"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t-1",
+      "title": "提案書の最終チェック",
+      "date": "2026-06-18",
+      "priority": "high",
+      "tags": ["仕事"],
+      "done": false,
+      "note": "第3章の数字を最新データに差し替える",
+      "projectId": "p-1"
+    },
+    {
+      "id": "t-2",
+      "title": "メール返信（3件）",
+      "date": "2026-06-18",
+      "priority": "medium",
+      "tags": ["仕事"],
+      "done": false
+    },
+    {
+      "id": "t-3",
+      "title": "ジムに行く",
+      "date": "2026-06-18",
+      "priority": "low",
+      "tags": ["プライベート"],
+      "done": false
+    },
+    {
+      "id": "t-4",
+      "title": "週報を書く",
+      "date": "2026-06-19",
+      "priority": "medium",
+      "tags": ["仕事"],
+      "done": false
+    }
+  ],
+  "savedIdeas": [
+    {
+      "id": "idea-1",
+      "content": "オンボーディングをゲーミフィケーション化する",
+      "aiResponse": "進捗バー・バッジ・マイルストーンの3要素から始めるのが定石です。",
+      "tags": ["プロダクト", "UX"],
+      "category": "アイデア",
+      "createdAt": "2026-06-17T10:30:00Z"
+    }
+  ],
+  "contacts": [
+    { "name": "田中 誠", "contact": "tanaka@example.com" },
+    { "name": "佐藤 花子", "contact": "090-1234-5678" },
+    { "name": "山田 太郎", "contact": "yamada@client.co.jp" },
+    { "name": "山本 部長", "contact": "yamamoto@example.com" },
+    { "name": "鈴木 デザイナー", "contact": "suzuki@example.com" }
+  ],
+  "projects": [
+    {
+      "id": "p-1",
+      "name": "Q3 提案プロジェクト",
+      "color": "#6366f1",
+      "startDate": "2026-06-01",
+      "endDate": "2026-07-31",
+      "summary": "Q3 の主要顧客向け提案活動",
+      "goal": "大阪・名古屋で各2件の受注獲得",
+      "note": "田中さんと共同で進める。資料は Google Drive に集約。"
+    },
+    {
+      "id": "p-2",
+      "name": "UI リニューアル",
+      "color": "#10b981",
+      "startDate": "2026-06-15",
+      "endDate": "2026-08-31",
+      "summary": "プロダクトの UI を全面リニューアルする",
+      "goal": "NPS +15pt 達成",
+      "note": "デザインシステム整備から着手。佐藤さん・鈴木さんが担当。"
+    }
+  ],
+  "globalTags": [
+    "仕事", "プライベート", "ミーティング", "出張", "会食",
+    "デザイン", "開発", "営業", "勉強", "健康",
+    "家族", "趣味", "読書", "運動", "プロジェクト"
+  ]
+}

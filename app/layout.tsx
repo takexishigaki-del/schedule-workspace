@@ -1,19 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "sonner";
 
-// Inter は欧文・数字部分にだけ適用したい（日本語はシステム日本語フォントに任せる）。
-// variable で `--font-inter` を発行し、`globals.css` の `--font-sans` で参照する。
-const inter = Inter({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-jakarta",
+  display: "swap",
+});
+
+const notoJP = Noto_Sans_JP({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-noto-jp",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "採用管理ワークスペース",
-  description: "tweakcn テーマ + 日本語タイポ検証用プロトタイプ",
+  title: "日々是好日",
+  description: "一日一日を精一杯生きるための、スケジュール・タスク・アイデア管理ワークスペース",
 };
 
 export const viewport: Viewport = {
@@ -27,11 +33,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`${inter.variable} h-full antialiased`}>
+    <html lang="ja" className={`${jakarta.variable} ${notoJP.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         {/* shadcn/ui の Sidebar コンポーネント（SidebarMenuButton の collapsed
             時 tooltip 等）が要求するためアプリ全体をラップする。 */}
         <TooltipProvider delay={300}>{children}</TooltipProvider>
+        <Toaster richColors position="bottom-right" duration={3000} />
       </body>
     </html>
   );

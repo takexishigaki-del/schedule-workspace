@@ -8,6 +8,7 @@ import path from "node:path";
 const projectRoot = path.resolve(__dirname);
 
 const nextConfig: NextConfig = {
+  output: "export",  // surge.sh などの静的ホスティング向け
   turbopack: {
     root: projectRoot,
   },

@@ -1,0 +1,195 @@
+{
+  "projects": [
+    {
+      "id": "p1",
+      "name": "引越し準備",
+      "description": "7月末の引越しに向けた準備全般",
+      "dueDate": "2026-07-31",
+      "priority": "high",
+      "tags": ["生活"]
+    },
+    {
+      "id": "p2",
+      "name": "学習計画",
+      "description": "Next.js・TypeScript の習得ロードマップ",
+      "dueDate": "2026-09-30",
+      "priority": "medium",
+      "tags": ["学習"]
+    },
+    {
+      "id": "p3",
+      "name": "副業プロジェクト",
+      "description": "LP 制作案件",
+      "dueDate": "2026-08-15",
+      "priority": "high",
+      "tags": ["仕事"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "projectId": "p1",
+      "name": "引越し業者の手配",
+      "dueDate": "2026-06-20",
+      "priority": "high",
+      "status": "in_progress"
+    },
+    {
+      "id": "t2",
+      "projectId": "p1",
+      "name": "住所変更手続き",
+      "dueDate": "2026-07-10",
+      "priority": "medium",
+      "status": "todo"
+    },
+    {
+      "id": "t3",
+      "projectId": "p2",
+      "name": "Next.js App Router を学ぶ",
+      "dueDate": "2026-07-31",
+      "priority": "high",
+      "status": "in_progress"
+    },
+    {
+      "id": "t4",
+      "projectId": "p2",
+      "name": "TypeScript 深掘り",
+      "dueDate": "2026-08-31",
+      "priority": "medium",
+      "status": "todo"
+    },
+    {
+      "id": "t5",
+      "projectId": "p3",
+      "name": "LP デザイン",
+      "dueDate": "2026-07-01",
+      "priority": "high",
+      "status": "todo"
+    },
+    {
+      "id": "t6",
+      "projectId": "p3",
+      "name": "クライアント確認・修正",
+      "dueDate": "2026-07-15",
+      "priority": "medium",
+      "status": "todo"
+    },
+    {
+      "id": "t7",
+      "name": "健康診断の予約",
+      "dueDate": "2026-06-15",
+      "priority": "medium",
+      "status": "todo"
+    },
+    {
+      "id": "t8",
+      "name": "歯医者の予約",
+      "dueDate": "2026-06-30",
+      "priority": "low",
+      "status": "todo"
+    }
+  ],
+  "todos": [
+    {
+      "id": "td1",
+      "taskId": "t1",
+      "title": "3社から見積もりを取る",
+      "dueDate": "2026-06-10",
+      "priority": "high",
+      "done": false
+    },
+    {
+      "id": "td2",
+      "taskId": "t1",
+      "title": "エレベーターの有無を確認",
+      "done": false
+    },
+    {
+      "id": "td3",
+      "taskId": "t1",
+      "title": "梱包資材を注文",
+      "done": true
+    },
+    {
+      "id": "td4",
+      "taskId": "t2",
+      "title": "市役所に転出届を出す",
+      "dueDate": "2026-07-05",
+      "priority": "high",
+      "done": false
+    },
+    {
+      "id": "td5",
+      "taskId": "t2",
+      "title": "銀行・クレカの住所変更",
+      "done": false
+    },
+    {
+      "id": "td6",
+      "taskId": "t3",
+      "title": "公式ドキュメントを読む",
+      "done": true
+    },
+    {
+      "id": "td7",
+      "taskId": "t3",
+      "title": "サンプルアプリを作る",
+      "dueDate": "2026-06-30",
+      "priority": "medium",
+      "done": false
+    },
+    {
+      "id": "td8",
+      "taskId": "t3",
+      "title": "勉強会に参加する",
+      "scheduledDate": "2026-06-20",
+      "done": false
+    },
+    {
+      "id": "td9",
+      "taskId": "t5",
+      "title": "ワイヤーフレームを作成",
+      "dueDate": "2026-06-15",
+      "priority": "high",
+      "done": false
+    },
+    {
+      "id": "td10",
+      "taskId": "t5",
+      "title": "Figma でデザイン制作",
+      "dueDate": "2026-06-25",
+      "priority": "high",
+      "done": false
+    },
+    {
+      "id": "td11",
+      "title": "牛乳を買う",
+      "scheduledDate": "2026-06-06",
+      "done": false
+    },
+    {
+      "id": "td12",
+      "title": "図書館の本を返す",
+      "dueDate": "2026-06-08",
+      "priority": "high",
+      "done": false
+    }
+  ],
+  "ideas": [
+    {
+      "id": "idea1",
+      "content": "ポモドーロタイマー機能があると集中できそう",
+      "createdAt": "2026-06-05T09:00:00Z"
+    },
+    {
+      "id": "idea2",
+      "content": "週次レビューの仕組みを作りたい",
+      "createdAt": "2026-06-04T14:30:00Z"
+    },
+    {
+      "id": "idea3",
+      "content": "タスクの見積もり時間を記録するといいかも",
+      "createdAt": "2026-06-03T11:00:00Z"
+    }
+  ]
+}

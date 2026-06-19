@@ -14,6 +14,7 @@
  */
 
 import { Textarea } from "@/components/ui/textarea";
+import { useModKey } from "@/lib/use-mod-key";
 
 export type InlineTextareaFieldProps = {
   /** 現在の値（空文字で「未設定」placeholder 表示） */
@@ -32,23 +33,29 @@ export function InlineTextareaField({
   ariaLabel,
   placeholder,
 }: InlineTextareaFieldProps) {
+  const modKey = useModKey();
   return (
-    <Textarea
-      defaultValue={value}
-      placeholder={placeholder ?? "未設定"}
-      aria-label={ariaLabel}
-      onBlur={(e) => {
-        if (e.target.value !== value) onSave(e.target.value);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-          (e.target as HTMLTextAreaElement).blur();
-        } else if (e.key === "Escape") {
-          (e.target as HTMLTextAreaElement).value = value;
-          (e.target as HTMLTextAreaElement).blur();
-        }
-      }}
-      className="min-h-24 bg-card leading-relaxed whitespace-pre-line"
-    />
+    <div className="flex flex-col gap-0.5">
+      <Textarea
+        defaultValue={value}
+        placeholder={placeholder ?? "未設定"}
+        aria-label={ariaLabel}
+        onBlur={(e) => {
+          if (e.target.value !== value) onSave(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            (e.target as HTMLTextAreaElement).blur();
+          } else if (e.key === "Escape") {
+            (e.target as HTMLTextAreaElement).value = value;
+            (e.target as HTMLTextAreaElement).blur();
+          }
+        }}
+        className="min-h-24 bg-card leading-relaxed whitespace-pre-line"
+      />
+      <p className="select-none text-xs text-muted-foreground/50">
+        {modKey}+Enter で保存 · Esc でキャンセル
+      </p>
+    </div>
   );
 }
