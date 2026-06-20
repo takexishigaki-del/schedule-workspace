@@ -12,12 +12,13 @@ import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "@/db/schema";
 
 function createDb() {
-  const url = process.env.DATABASE_URL;
+  // Vercel + Neon 統合は POSTGRES_URL を設定する。
+  // DATABASE_URL も互換性のために確認する。
+  const url = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
   if (!url) {
     throw new Error(
-      "DATABASE_URL が設定されていません。\n" +
-      ".env.local に DATABASE_URL=postgres://... を追加するか、\n" +
-      "`npx vercel env pull .env.local` を実行してください。",
+      "POSTGRES_URL が設定されていません。\n" +
+      "`npx vercel env pull .env.local` を実行して環境変数を取得してください。",
     );
   }
   return drizzle(neon(url), { schema });

@@ -6,7 +6,7 @@ const AUTH_COOKIE = "site-auth";
 // 保護しないパス（ログイン画面・認証API・静的ファイル）
 const PUBLIC_PATHS = ["/login", "/api/auth/"];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 静的アセットと公開パスはスキップ
