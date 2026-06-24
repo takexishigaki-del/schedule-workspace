@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { format, isSameDay, parseISO } from "date-fns";
+import { isSameDay, parseISO } from "date-fns";
 import {
   Group as PanelGroup,
   Panel,
@@ -17,9 +17,6 @@ import {
   type Contact,
   type Project,
   type ScheduleWorkspaceData,
-  scheduleWorkspaceDataSchema,
-  scheduleSchema,
-  dailyTaskSchema,
   savedIdeaSchema,
   contactSchema,
   projectSchema,
@@ -44,65 +41,73 @@ type Props = {
   initialData: ScheduleWorkspaceData;
 };
 
-const LS_KEY = "schedule-workspace-v3";
+// localStorage key: schedules/tasks は DB 管理に移行したため v4 に更新
+const LS_KEY = "schedule-workspace-v4";
+
+// ===== API helpers (fire-and-forget) =====
+
+function apiPost(url: string, data: unknown): void {
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  }).catch(() => toast.error("サーバーへの保存に失敗しました。"));
+}
+
+function apiPatch(url: string, data: unknown): void {
+  fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  }).catch(() => toast.error("サーバーへの更新に失敗しました。"));
+}
+
+function apiDelete(url: string): void {
+  fetch(url, { method: "DELETE" }).catch(() =>
+    toast.error("サーバーからの削除に失敗しました。"),
+  );
+}
 
 // ===== Component =====
 
 export function ScheduleWorkspace({ initialData }: Props) {
-  // ── localStorage 一括読み込み（lazy init で同期的に実施） ──────────────
-  const [[loadedData, loadStatus]] = useState<
-    [ScheduleWorkspaceData, "ok" | "warn" | "error"]
-  >(() => loadInitialDataSync(initialData));
+  // schedules / tasks は DB から初期値を受け取る（localStorage は使わない）
+  const [schedules, setSchedules] = useState<Schedule[]>(initialData.schedules);
+  const [tasks, setTasks] = useState<DailyTask[]>(initialData.tasks);
 
-  const [schedules, setSchedules] = useState<Schedule[]>(loadedData.schedules);
-  const [tasks, setTasks] = useState<DailyTask[]>(loadedData.tasks);
-  const [savedIdeas, setSavedIdeas] = useState<SavedIdea[]>(loadedData.savedIdeas);
-  const [contacts, setContacts] = useState<Contact[]>(loadedData.contacts);
-  const [projects, setProjects] = useState<Project[]>(loadedData.projects);
-  const [globalTags, setGlobalTags] = useState<string[]>(loadedData.globalTags);
+  // それ以外は localStorage から復元（なければ initialData の空配列）
+  const [savedIdeas, setSavedIdeas] = useState<SavedIdea[]>(() =>
+    loadLocalField(savedIdeaSchema, "savedIdeas", initialData.savedIdeas),
+  );
+  const [contacts, setContacts] = useState<Contact[]>(() =>
+    loadLocalField(contactSchema, "contacts", initialData.contacts),
+  );
+  const [projects, setProjects] = useState<Project[]>(() =>
+    loadLocalField(projectSchema, "projects", initialData.projects),
+  );
+  const [globalTags, setGlobalTags] = useState<string[]>(() =>
+    loadLocalField(z.string(), "globalTags", initialData.globalTags),
+  );
 
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
 
-  // ── マウント後に通知だけ行う（setState は呼ばない） ──────────────────
-  useEffect(() => {
-    if (loadStatus === "warn") {
-      toast.warning("一部のデータ形式が古いため、読み込めなかった項目があります。");
-    } else if (loadStatus === "error") {
-      toast.error("保存データの読み込みに失敗しました。データが壊れている可能性があります。");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ストレージ上限警告: 4 MB 超えたら imageUrl を除外して保存
+  // ── schedules/tasks 以外を localStorage に保存 ──────────────────────────
   const storageWarnedRef = useRef(false);
-
   useEffect(() => {
-    const MAX_LS_BYTES = 4 * 1024 * 1024; // 4 MB
     try {
-      const data = { schedules, tasks, savedIdeas, contacts, projects, globalTags };
-      const raw = JSON.stringify(data);
-
-      if (raw.length > MAX_LS_BYTES) {
-        const stripped = {
-          ...data,
-          schedules: schedules.map(({ imageUrl: _i, ...s }) => s),
-          tasks: tasks.map(({ imageUrl: _i, ...t }) => t),
-          projects: projects.map(({ imageUrl: _i, ...p }) => p),
-        };
-        localStorage.setItem(LS_KEY, JSON.stringify(stripped));
-        if (!storageWarnedRef.current) {
-          toast.warning(
-            "ストレージの上限に近いため、画像を省略して保存しました。不要な画像は削除してください。",
-          );
-          storageWarnedRef.current = true;
-        }
-      } else {
-        localStorage.setItem(LS_KEY, raw);
-        storageWarnedRef.current = false;
+      localStorage.setItem(
+        LS_KEY,
+        JSON.stringify({ savedIdeas, contacts, projects, globalTags }),
+      );
+      storageWarnedRef.current = false;
+    } catch {
+      if (!storageWarnedRef.current) {
+        toast.warning("ローカルストレージへの保存に失敗しました。");
+        storageWarnedRef.current = true;
       }
-    } catch { /* ignore */ }
-  }, [schedules, tasks, savedIdeas, contacts, projects, globalTags]);
+    }
+  }, [savedIdeas, contacts, projects, globalTags]);
 
   // ── Derived ────────────────────────────────────────
 
@@ -141,7 +146,10 @@ export function ScheduleWorkspace({ initialData }: Props) {
       const map = new Map(prev.map((c) => [c.name, c]));
       for (const c of incoming) {
         if (c.name.trim())
-          map.set(c.name, { name: c.name, contact: c.contact ?? map.get(c.name)?.contact });
+          map.set(c.name, {
+            name: c.name,
+            contact: c.contact ?? map.get(c.name)?.contact,
+          });
       }
       return Array.from(map.values());
     });
@@ -149,65 +157,121 @@ export function ScheduleWorkspace({ initialData }: Props) {
 
   // ── Schedules ─────────────────────────────────────
 
-  const addSchedule = useCallback((s: Omit<Schedule, "id" | "tags" | "done">) => {
-    const n: Schedule = { ...s, id: `s-${Date.now()}`, tags: [], done: false };
-    setSchedules((prev) => [...prev, n]);
-    if (s.attendees?.length) mergeContacts(s.attendees);
-  }, [mergeContacts]);
+  const addSchedule = useCallback(
+    (s: Omit<Schedule, "id" | "tags" | "done">) => {
+      const n: Schedule = {
+        ...s,
+        id: crypto.randomUUID(),
+        tags: [],
+        done: false,
+      };
+      setSchedules((prev) => [...prev, n]);
+      if (s.attendees?.length) mergeContacts(s.attendees);
+      apiPost("/api/schedules", n);
+    },
+    [mergeContacts],
+  );
 
-  const updateSchedule = useCallback((id: string, patch: Partial<Schedule>) => {
-    setSchedules((prev) => prev.map((s) => s.id === id ? { ...s, ...patch } : s));
-    if (patch.attendees?.length) mergeContacts(patch.attendees);
-  }, [mergeContacts]);
+  const updateSchedule = useCallback(
+    (id: string, patch: Partial<Schedule>) => {
+      setSchedules((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+      );
+      if (patch.attendees?.length) mergeContacts(patch.attendees);
+      apiPatch(`/api/schedules/${id}`, patch);
+    },
+    [mergeContacts],
+  );
 
   const deleteSchedule = useCallback((id: string) => {
     setSchedules((prev) => prev.filter((s) => s.id !== id));
-    setSelectedItem((prev) => prev?.kind === "schedule" && prev.data.id === id ? null : prev);
+    setSelectedItem((prev) =>
+      prev?.kind === "schedule" && prev.data.id === id ? null : prev,
+    );
+    apiDelete(`/api/schedules/${id}`);
   }, []);
 
   const copySchedule = useCallback((id: string) => {
     setSchedules((prev) => {
       const src = prev.find((s) => s.id === id);
       if (!src) return prev;
-      return [...prev, { ...src, id: `s-${Date.now()}`, title: `${src.title}（コピー）` }];
+      const copy: Schedule = {
+        ...src,
+        id: crypto.randomUUID(),
+        title: `${src.title}（コピー）`,
+      };
+      apiPost("/api/schedules", copy);
+      return [...prev, copy];
     });
   }, []);
 
   // ── Tasks ──────────────────────────────────────────
 
   const addTask = useCallback((t: Omit<DailyTask, "id" | "tags" | "done">) => {
-    setTasks((prev) => [...prev, { ...t, id: `t-${Date.now()}`, tags: [], done: false }]);
+    const n: DailyTask = {
+      ...t,
+      id: crypto.randomUUID(),
+      tags: [],
+      done: false,
+    };
+    setTasks((prev) => [...prev, n]);
+    apiPost("/api/tasks", n);
   }, []);
 
   const updateTask = useCallback((id: string, patch: Partial<DailyTask>) => {
-    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...patch } : t));
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    );
+    apiPatch(`/api/tasks/${id}`, patch);
   }, []);
 
   const toggleTask = useCallback((id: string) => {
-    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, done: !t.done } : t));
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        const next = { ...t, done: !t.done };
+        apiPatch(`/api/tasks/${id}`, { done: next.done });
+        return next;
+      }),
+    );
   }, []);
 
   const deleteTask = useCallback((id: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== id));
-    setSelectedItem((prev) => prev?.kind === "task" && prev.data.id === id ? null : prev);
+    setSelectedItem((prev) =>
+      prev?.kind === "task" && prev.data.id === id ? null : prev,
+    );
+    apiDelete(`/api/tasks/${id}`);
   }, []);
 
   const copyTask = useCallback((id: string) => {
     setTasks((prev) => {
       const src = prev.find((t) => t.id === id);
       if (!src) return prev;
-      return [...prev, { ...src, id: `t-${Date.now()}`, title: `${src.title}（コピー）`, done: false }];
+      const copy: DailyTask = {
+        ...src,
+        id: crypto.randomUUID(),
+        title: `${src.title}（コピー）`,
+        done: false,
+      };
+      apiPost("/api/tasks", copy);
+      return [...prev, copy];
     });
   }, []);
 
   // ── Ideas ──────────────────────────────────────────
 
   const saveIdea = useCallback((idea: Omit<SavedIdea, "id" | "tags">) => {
-    setSavedIdeas((prev) => [{ ...idea, id: `idea-${Date.now()}`, tags: [] }, ...prev]);
+    setSavedIdeas((prev) => [
+      { ...idea, id: `idea-${Date.now()}`, tags: [] },
+      ...prev,
+    ]);
   }, []);
 
   const updateIdea = useCallback((id: string, patch: Partial<SavedIdea>) => {
-    setSavedIdeas((prev) => prev.map((i) => i.id === id ? { ...i, ...patch } : i));
+    setSavedIdeas((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, ...patch } : i)),
+    );
   }, []);
 
   const deleteIdea = useCallback((id: string) => {
@@ -220,13 +284,20 @@ export function ScheduleWorkspace({ initialData }: Props) {
     setProjects((prev) => [...prev, { ...p, id: `p-${Date.now()}` }]);
   }, []);
 
-  const updateProject = useCallback((id: string, patch: Partial<Project>) => {
-    setProjects((prev) => prev.map((p) => p.id === id ? { ...p, ...patch } : p));
-  }, []);
+  const updateProject = useCallback(
+    (id: string, patch: Partial<Project>) => {
+      setProjects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      );
+    },
+    [],
+  );
 
   const deleteProject = useCallback((id: string) => {
     setProjects((prev) => prev.filter((p) => p.id !== id));
-    setSelectedItem((prev) => prev?.kind === "project" && prev.data.id === id ? null : prev);
+    setSelectedItem((prev) =>
+      prev?.kind === "project" && prev.data.id === id ? null : prev,
+    );
   }, []);
 
   // ── Global Tags ───────────────────────────────────
@@ -323,7 +394,9 @@ export function ScheduleWorkspace({ initialData }: Props) {
               onSaveIdea={saveIdea}
               onUpdateIdea={updateIdea}
               onDeleteIdea={deleteIdea}
-              onSelectIdea={(idea) => setSelectedItem({ kind: "idea", data: idea })}
+              onSelectIdea={(idea) =>
+                setSelectedItem({ kind: "idea", data: idea })
+              }
             />
           </Panel>
         </PanelGroup>
@@ -346,35 +419,22 @@ function ResizeHandle() {
   );
 }
 
-// ── localStorage 一括読み込みヘルパー（コンポーネント外・SSR 安全） ─────
-function loadInitialDataSync(
-  fallback: ScheduleWorkspaceData,
-): [ScheduleWorkspaceData, "ok" | "warn" | "error"] {
-  if (typeof window === "undefined") return [fallback, "ok"]; // SSR
+// ── localStorage ヘルパー（schedules/tasks 以外のフィールドのみ復元） ────────
+
+function loadLocalField<T>(
+  schema: z.ZodType<T>,
+  key: string,
+  fallback: T[],
+): T[] {
+  if (typeof window === "undefined") return fallback;
   try {
     const stored = localStorage.getItem(LS_KEY);
-    if (!stored) return [fallback, "ok"];
-    const raw: unknown = JSON.parse(stored);
-    const result = scheduleWorkspaceDataSchema.safeParse(raw);
-    if (result.success) return [result.data, "ok"];
-
-    // スキーマ不一致: フィールドごとに部分復元
-    const p = raw as Record<string, unknown>;
-    const partial: Partial<ScheduleWorkspaceData> = {};
-    const schArr = z.array(scheduleSchema).safeParse(p.schedules);
-    const taskArr = z.array(dailyTaskSchema).safeParse(p.tasks);
-    const ideaArr = z.array(savedIdeaSchema).safeParse(p.savedIdeas);
-    const contArr = z.array(contactSchema).safeParse(p.contacts);
-    const projArr = z.array(projectSchema).safeParse(p.projects);
-    const tagArr = z.array(z.string()).safeParse(p.globalTags);
-    if (schArr.success) partial.schedules = schArr.data;
-    if (taskArr.success) partial.tasks = taskArr.data;
-    if (ideaArr.success) partial.savedIdeas = ideaArr.data;
-    if (contArr.success) partial.contacts = contArr.data;
-    if (projArr.success) partial.projects = projArr.data;
-    if (tagArr.success) partial.globalTags = tagArr.data;
-    return [{ ...fallback, ...partial }, "warn"];
+    if (!stored) return fallback;
+    const raw = JSON.parse(stored) as Record<string, unknown>;
+    const result = z.array(schema).safeParse(raw[key]);
+    return result.success ? result.data : fallback;
   } catch {
-    return [fallback, "error"];
+    return fallback;
   }
 }
+

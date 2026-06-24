@@ -15,10 +15,10 @@ import {
 } from "drizzle-orm/pg-core";
 
 // ── ユーザー ─────────────────────────────────────────────────
-// Clerk の userId を clerkId として保存し、他テーブルの外部キーは users.id を使う。
+// 現フェーズはシングルユーザー（パスワード認証）のため clerkId は nullable。
 export const users = pgTable("users", {
   id:        uuid("id").primaryKey().defaultRandom(),
-  clerkId:   text("clerk_id").notNull().unique(),
+  clerkId:   text("clerk_id").unique(), // nullable: Clerk 未使用時は null
   email:     text("email").notNull(),
   name:      text("name"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -43,22 +43,24 @@ export const projects = pgTable("projects", {
 
 // ── 予定（カレンダーイベント）────────────────────────────────
 export const schedules = pgTable("schedules", {
-  id:        uuid("id").primaryKey().defaultRandom(),
-  userId:    uuid("user_id")
-               .references(() => users.id, { onDelete: "cascade" })
-               .notNull(),
-  projectId: uuid("project_id")
-               .references(() => projects.id, { onDelete: "set null" }),
-  title:     text("title").notNull(),
-  date:      date("date").notNull(),
-  endDate:   date("end_date"),
-  startTime: varchar("start_time", { length: 5 }),
-  endTime:   varchar("end_time",   { length: 5 }),
-  location:  text("location"),
-  note:      text("note"),
-  priority:  varchar("priority", { length: 10 }),
-  done:      boolean("done").default(false).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  id:            uuid("id").primaryKey().defaultRandom(),
+  userId:        uuid("user_id")
+                   .references(() => users.id, { onDelete: "cascade" })
+                   .notNull(),
+  projectId:     text("project_id"),   // FK なし（projects 移行前は LS の ID をそのまま保存）
+  title:         text("title").notNull(),
+  date:          date("date").notNull(),
+  endDate:       date("end_date"),
+  startTime:     varchar("start_time", { length: 5 }),
+  endTime:       varchar("end_time",   { length: 5 }),
+  location:      text("location"),
+  imageUrl:      text("image_url"),
+  note:          text("note"),
+  priority:      varchar("priority", { length: 10 }),
+  done:          boolean("done").default(false).notNull(),
+  attendeesJson: text("attendees_json").default("[]").notNull(),
+  tagsJson:      text("tags_json").default("[]").notNull(),
+  createdAt:     timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
 // ── タスク（やること）────────────────────────────────────────
@@ -67,14 +69,15 @@ export const tasks = pgTable("tasks", {
   userId:    uuid("user_id")
                .references(() => users.id, { onDelete: "cascade" })
                .notNull(),
-  projectId: uuid("project_id")
-               .references(() => projects.id, { onDelete: "set null" }),
+  projectId: text("project_id"),   // FK なし（projects 移行前は LS の ID をそのまま保存）
   title:     text("title").notNull(),
   date:      date("date"),
   time:      varchar("time", { length: 5 }),
   priority:  varchar("priority", { length: 10 }),
   done:      boolean("done").default(false).notNull(),
   note:      text("note"),
+  imageUrl:  text("image_url"),
+  tagsJson:  text("tags_json").default("[]").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
