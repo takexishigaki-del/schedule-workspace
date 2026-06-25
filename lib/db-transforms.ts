@@ -31,6 +31,7 @@ export function dbToSchedule(row: DbSchedule): Schedule {
     priority: (row.priority as Priority) ?? undefined,
     done: row.done,
     projectId: row.projectId ?? undefined,
+    googleEventId: row.googleEventId ?? undefined,
     attendees: parseJson(row.attendeesJson, []),
     tags: parseJson(row.tagsJson, []),
   };

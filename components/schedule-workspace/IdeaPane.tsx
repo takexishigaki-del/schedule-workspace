@@ -32,6 +32,7 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  source?: "api" | "mock";
 };
 
 type AIMode = "normal" | "grill";
@@ -138,6 +139,9 @@ export function IdeaPane({
       content: text,
       timestamp: new Date().toISOString(),
     };
+
+    // Capture messages before state update for API request body
+    const currentMessages = messages;
     setMessages((prev) => [...prev, userMsg]);
 
     const currentGrillIndex = grillIndex;
@@ -145,20 +149,72 @@ export function IdeaPane({
       setGrillIndex((i) => i + 1);
     }
 
-    await new Promise((resolve) =>
-      setTimeout(resolve, 1000 + Math.random() * 800),
-    );
+    const apiMessages = [...currentMessages, userMsg].map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
 
-    const aiMsg: ChatMessage = {
-      id: `msg-${Date.now()}-ai`,
-      role: "assistant",
-      content: getMockResponse(mode, currentGrillIndex, text),
-      timestamp: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, aiMsg]);
-    setIsLoading(false);
+    const aiMsgId = `msg-${Date.now() + 1}-ai`;
+    let streamStarted = false;
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages, mode }),
+      });
+
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
+      // Start streaming
+      streamStarted = true;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: aiMsgId,
+          role: "assistant",
+          content: "",
+          timestamp: new Date().toISOString(),
+          source: "api",
+        },
+      ]);
+      setIsLoading(false);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMsgId ? { ...m, content: m.content + chunk } : m,
+          ),
+        );
+      }
+    } catch {
+      // Fall through to mock fallback
+    }
+
+    if (!streamStarted) {
+      // Mock fallback (used when API key is not set or request fails)
+      await new Promise<void>((r) => setTimeout(r, 1000 + Math.random() * 800));
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: aiMsgId,
+          role: "assistant",
+          content: getMockResponse(mode, currentGrillIndex, text),
+          timestamp: new Date().toISOString(),
+          source: "mock",
+        },
+      ]);
+      setIsLoading(false);
+    }
+
     textareaRef.current?.focus();
-  }, [input, isLoading, mode, grillIndex]);
+  }, [input, isLoading, mode, grillIndex, messages]);
 
   const handleSaveMessage = useCallback(
     (msg: ChatMessage) => {
@@ -170,7 +226,7 @@ export function IdeaPane({
         content: prevUserMsg?.content ?? msg.content,
         aiResponse:
           msg.role === "assistant"
-            ? msg.content.split("\n\n_※")[0]
+            ? msg.content.split("\n\n_※")[0].trim() || undefined
             : undefined,
         category: mode === "grill" ? "壁打ち" : "アイデア",
         createdAt: msg.timestamp,
@@ -349,7 +405,7 @@ export function IdeaPane({
                 </Button>
               </div>
               <p className="mt-1.5 text-xs text-muted-foreground/60">
-                {modKey}+Enter で送信 · API キーを設定すると実際の AI と接続できます
+                {modKey}+Enter で送信
               </p>
             </>
           )}
@@ -482,6 +538,7 @@ function ChatBubble({
   mode: AIMode;
   onSave: () => void;
 }) {
+
   const isUser = msg.role === "user";
 
   // Render markdown-like bold and line breaks
@@ -512,7 +569,9 @@ function ChatBubble({
         <span className="ml-1 flex items-center gap-1 text-xs text-muted-foreground">
           {mode === "grill" ? "🔥" : <Sparkles className="size-3 text-primary" />}
           AI
-          <span className="rounded bg-muted px-1 text-[10px]">モック</span>
+          {msg.source === "mock" && (
+            <span className="rounded bg-muted px-1 text-[10px]">モック</span>
+          )}
         </span>
       )}
 

@@ -24,6 +24,7 @@ import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DeleteConfirmDialog } from "@/components/workspace/DeleteConfirmDialog";
+import { mapsUrl } from "@/lib/maps";
 import { cn } from "@/lib/utils";
 
 // ── props ──────────────────────────────────────────────────────────────────
@@ -314,10 +315,16 @@ function ScheduleCard({
               <span className="text-xs text-muted-foreground">〜{s.endDate}</span>
             )}
             {s.location && (
-              <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+              <a
+                href={mapsUrl(s.location)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary"
+              >
                 <MapPin className="size-3 shrink-0" />
-                <span className="truncate">{s.location}</span>
-              </span>
+                <span className="truncate hover:underline">{s.location}</span>
+              </a>
             )}
           </div>
 

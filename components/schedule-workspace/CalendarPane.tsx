@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { ja } from "date-fns/locale";
 import { addDays, format, isSameDay, isWithinInterval, parseISO } from "date-fns";
 import type { DayButton } from "react-day-picker";
-import { FolderOpen, Plus, Tag, Trash2, X } from "lucide-react";
+import { CalendarCheck2, FolderOpen, Plus, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { type Schedule, type DailyTask, type Project } from "@/lib/schedule-schema";
@@ -236,6 +236,11 @@ export function CalendarPane({
                 onAddTag={onAddGlobalTag}
                 onDeleteTag={onDeleteGlobalTag}
               />
+
+              <Separator />
+
+              {/* ── Google Calendar 連携 ── */}
+              <GoogleCalendarSection />
 
             </div>
           </ScrollArea>
@@ -483,6 +488,82 @@ function TagsSection({
             className="size-6 shrink-0"
           >
             <Plus className="size-3" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────
+// GoogleCalendarSection
+// ───────────────────────────────────────────────
+
+type GCalStatus = "loading" | "not-configured" | "disconnected" | "connected";
+
+function GoogleCalendarSection() {
+  const [status, setStatus] = useState<GCalStatus>("loading");
+
+  useEffect(() => {
+    fetch("/api/auth/google/status")
+      .then((r) => r.json())
+      .then((data: { connected: boolean; configured: boolean }) => {
+        if (!data.configured) setStatus("not-configured");
+        else if (data.connected) setStatus("connected");
+        else setStatus("disconnected");
+      })
+      .catch(() => setStatus("not-configured"));
+  }, []);
+
+  const handleDisconnect = async () => {
+    await fetch("/api/auth/google/disconnect", { method: "POST" });
+    setStatus("disconnected");
+    toast.success("Google Calendar との連携を解除しました");
+  };
+
+  if (status === "loading" || status === "not-configured") return null;
+
+  return (
+    <div className="flex flex-col gap-2 px-3 py-3">
+      <div className="flex items-center gap-1">
+        <CalendarCheck2 className="size-3 text-sidebar-foreground/40" />
+        <p className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+          Google Calendar
+        </p>
+      </div>
+
+      {status === "connected" ? (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-green-500" />
+            <span className="text-xs text-sidebar-foreground/70">連携中</span>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={handleDisconnect}
+            className="text-xs text-sidebar-foreground/40 hover:text-destructive"
+          >
+            解除
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs text-sidebar-foreground/50">
+            予定を Google Calendar と自動同期します
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={() => {
+              window.location.href = "/api/auth/google";
+            }}
+            className="w-full gap-1.5 text-xs"
+          >
+            <CalendarCheck2 className="size-3" />
+            Google Calendar に連携
           </Button>
         </div>
       )}

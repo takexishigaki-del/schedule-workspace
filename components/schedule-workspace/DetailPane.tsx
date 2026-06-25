@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { InlineTextField } from "@/components/primitives/InlineTextField";
 import { InlineTextareaField } from "@/components/primitives/InlineTextareaField";
 import { InlineFieldRow } from "@/components/primitives/InlineFieldRow";
+import { mapsUrl } from "@/lib/maps";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -497,7 +498,19 @@ function ScheduleDetail({ schedule: s, contacts, globalTags, onUpdate }: {
             <div className="flex items-center gap-1.5">
               <MapPin className="size-3.5 shrink-0 text-muted-foreground" />
               <InlineTextField value={s.location ?? ""} onSave={(v) => onUpdate({ location: v || undefined })}
-              ariaLabel="場所" placeholder="場所名・URL" className="flex-1" />
+                ariaLabel="場所" placeholder="場所名・URL" className="flex-1" />
+              {s.location && (
+                <a
+                  href={mapsUrl(s.location)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex shrink-0 items-center gap-0.5 text-xs text-primary hover:underline"
+                  aria-label="Google マップで見る"
+                >
+                  <ExternalLink className="size-3" />
+                  地図
+                </a>
+              )}
             </div>
           </InlineFieldRow>
 

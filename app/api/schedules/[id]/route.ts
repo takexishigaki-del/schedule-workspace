@@ -4,6 +4,12 @@ import { db } from "@/lib/db";
 import { schedules } from "@/db/schema";
 import { SYSTEM_USER_ID } from "@/lib/system-user";
 import { scheduleSchema } from "@/lib/schedule-schema";
+import {
+  getAccessToken,
+  buildGCalEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent,
+} from "@/lib/google-calendar";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -16,6 +22,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid data" }, { status: 400 });
   }
   const patch = parsed.data;
+
   await db
     .update(schedules)
     .set({
@@ -38,16 +45,64 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     .where(
       and(eq(schedules.id, id), eq(schedules.userId, SYSTEM_USER_ID)),
     );
+
+  // Google Calendar 同期（ベストエフォート）
+  try {
+    const [row] = await db
+      .select()
+      .from(schedules)
+      .where(and(eq(schedules.id, id), eq(schedules.userId, SYSTEM_USER_ID)));
+
+    if (row?.googleEventId) {
+      const token = await getAccessToken(SYSTEM_USER_ID);
+      if (token) {
+        const allDay = !row.startTime;
+        const gcalEvent = buildGCalEvent({
+          summary: row.title,
+          location: row.location ?? undefined,
+          description: row.note ?? undefined,
+          start: allDay ? row.date : `${row.date}T${row.startTime}`,
+          end: allDay
+            ? row.endDate ?? row.date
+            : `${row.date}T${row.endTime ?? row.startTime}`,
+          allDay,
+        });
+        await updateCalendarEvent(token, row.googleEventId, gcalEvent);
+      }
+    }
+  } catch {
+    console.warn("[gcal] PATCH sync failed for schedule", id);
+  }
+
   return NextResponse.json({ ok: true });
 }
 
 /** 予定を削除 */
 export async function DELETE(_request: Request, { params }: RouteContext) {
   const { id } = await params;
+
+  // Google Calendar 同期（削除前にイベント ID を取得）
+  try {
+    const [row] = await db
+      .select({ googleEventId: schedules.googleEventId })
+      .from(schedules)
+      .where(and(eq(schedules.id, id), eq(schedules.userId, SYSTEM_USER_ID)));
+
+    if (row?.googleEventId) {
+      const token = await getAccessToken(SYSTEM_USER_ID);
+      if (token) {
+        await deleteCalendarEvent(token, row.googleEventId);
+      }
+    }
+  } catch {
+    console.warn("[gcal] DELETE sync failed for schedule", id);
+  }
+
   await db
     .delete(schedules)
     .where(
       and(eq(schedules.id, id), eq(schedules.userId, SYSTEM_USER_ID)),
     );
+
   return NextResponse.json({ ok: true });
 }

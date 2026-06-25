@@ -43,24 +43,25 @@ export const projects = pgTable("projects", {
 
 // ── 予定（カレンダーイベント）────────────────────────────────
 export const schedules = pgTable("schedules", {
-  id:            uuid("id").primaryKey().defaultRandom(),
-  userId:        uuid("user_id")
-                   .references(() => users.id, { onDelete: "cascade" })
-                   .notNull(),
-  projectId:     text("project_id"),   // FK なし（projects 移行前は LS の ID をそのまま保存）
-  title:         text("title").notNull(),
-  date:          date("date").notNull(),
-  endDate:       date("end_date"),
-  startTime:     varchar("start_time", { length: 5 }),
-  endTime:       varchar("end_time",   { length: 5 }),
-  location:      text("location"),
-  imageUrl:      text("image_url"),
-  note:          text("note"),
-  priority:      varchar("priority", { length: 10 }),
-  done:          boolean("done").default(false).notNull(),
-  attendeesJson: text("attendees_json").default("[]").notNull(),
-  tagsJson:      text("tags_json").default("[]").notNull(),
-  createdAt:     timestamp("created_at", { withTimezone: true }).defaultNow(),
+  id:             uuid("id").primaryKey().defaultRandom(),
+  userId:         uuid("user_id")
+                    .references(() => users.id, { onDelete: "cascade" })
+                    .notNull(),
+  projectId:      text("project_id"),   // FK なし（projects 移行前は LS の ID をそのまま保存）
+  title:          text("title").notNull(),
+  date:           date("date").notNull(),
+  endDate:        date("end_date"),
+  startTime:      varchar("start_time", { length: 5 }),
+  endTime:        varchar("end_time",   { length: 5 }),
+  location:       text("location"),
+  imageUrl:       text("image_url"),
+  note:           text("note"),
+  priority:       varchar("priority", { length: 10 }),
+  done:           boolean("done").default(false).notNull(),
+  attendeesJson:  text("attendees_json").default("[]").notNull(),
+  tagsJson:       text("tags_json").default("[]").notNull(),
+  googleEventId:  text("google_event_id"),  // Google Calendar イベント ID
+  createdAt:      timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
 // ── タスク（やること）────────────────────────────────────────
@@ -167,6 +168,17 @@ export const ideaTags = pgTable(
   },
   (t) => [primaryKey({ columns: [t.ideaId, t.tagId] })],
 );
+
+// ── Google OAuth トークン ─────────────────────────────────────
+export const googleTokens = pgTable("google_tokens", {
+  userId:       uuid("user_id")
+                  .primaryKey()
+                  .references(() => users.id, { onDelete: "cascade" }),
+  accessToken:  text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt:    timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt:    timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
 
 // ── 添付ファイル（Vercel Blob の URL を保存）─────────────────
 // imageUrl の Base64 をやめて、ここにファイル URL を入れる。

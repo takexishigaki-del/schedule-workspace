@@ -52,6 +52,7 @@ export const scheduleSchema = z.object({
   priority: prioritySchema.optional(),
   done: z.boolean().default(false),
   projectId: z.string().optional(),
+  googleEventId: z.string().optional(),
   attendees: z.array(attendeeSchema).default([]),
   tags: z.array(z.string()).default([]),
 });
