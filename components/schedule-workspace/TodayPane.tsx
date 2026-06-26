@@ -622,6 +622,7 @@ type SchedForm = {
   title: string; date: string; endDate: string;
   startTime: string; endTime: string; location: string;
   note: string; priority: Priority | ""; attendees: Attendee[]; tags: string[];
+  imageUrl: string;
 };
 
 function AddScheduleDialog({
@@ -635,6 +636,7 @@ function AddScheduleDialog({
     title: "", date: defaultDate, endDate: "",
     startTime: "", endTime: "", location: "",
     note: "", priority: "", attendees: [], tags: [],
+    imageUrl: "",
   });
   const [form, setForm] = useState<SchedForm>(blank);
 
@@ -656,6 +658,7 @@ function AddScheduleDialog({
       note: form.note.trim() || undefined,
       priority: (form.priority as Priority) || undefined,
       attendees: form.attendees,
+      imageUrl: form.imageUrl || undefined,
     });
     onOpenChange(false);
   };
@@ -720,6 +723,10 @@ function AddScheduleDialog({
             <Textarea id="s-note" value={form.note} onChange={(e) => set("note")(e.target.value)}
               placeholder="備考・注意事項" rows={2} className="resize-none" />
           </Field>
+          <Field>
+            <FieldLabel>画像</FieldLabel>
+            <DialogImageZone value={form.imageUrl} onChange={set("imageUrl")} />
+          </Field>
         </FieldGroup>
         <DialogFooter>
           <DialogClose render={<Button variant="outline">キャンセル</Button>} />
@@ -727,6 +734,65 @@ function AddScheduleDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ── DialogImageZone ─────────────────────────────────────────────────────────
+
+function DialogImageZone({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const MAX_BYTES = 500 * 1024;
+
+  const processFile = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > MAX_BYTES) {
+      toast.warning(`画像が大きすぎます（${Math.round(file.size / 1024)} KB）。500 KB 以下の画像をお使いください。`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => onChange(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  if (value) {
+    return (
+      <div className="group/img relative overflow-hidden rounded-lg">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={value} alt="添付画像" className="h-32 w-full object-cover" />
+        <button type="button" onClick={() => onChange("")}
+          aria-label="画像を削除"
+          className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white opacity-0 transition-opacity group-hover/img:opacity-100 hover:bg-destructive">
+          <X className="size-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }} />
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault(); setIsDragOver(false);
+          const f = [...e.dataTransfer.files].find((fi) => fi.type.startsWith("image/"));
+          if (f) processFile(f);
+        }}
+        className={cn(
+          "flex h-20 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed transition-colors",
+          isDragOver ? "border-primary bg-primary/5" : "border-border bg-muted/30 hover:border-primary/40",
+        )}
+      >
+        <ImageIcon className={cn("size-5", isDragOver ? "text-primary" : "text-muted-foreground/40")} />
+        <p className="text-xs text-muted-foreground">
+          {isDragOver ? "ドロップして追加" : "クリックまたはドラッグで画像を追加"}
+        </p>
+      </div>
+    </>
   );
 }
 

@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { InlineTextField } from "@/components/primitives/InlineTextField";
 import { InlineTextareaField } from "@/components/primitives/InlineTextareaField";
 import { InlineFieldRow } from "@/components/primitives/InlineFieldRow";
+import { InlineDateField } from "@/components/primitives/InlineDateField";
 import { mapsUrl } from "@/lib/maps";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -466,30 +467,36 @@ function ScheduleDetail({ schedule: s, contacts, globalTags, onUpdate }: {
         <dl className="flex flex-col gap-4 text-sm">
           <InlineFieldRow label="開始日時">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <CalendarDays className="size-3.5 shrink-0 text-muted-foreground" />
-                <InlineTextField value={s.date} onSave={(v) => v && onUpdate({ date: v })}
-                  ariaLabel="開始日" placeholder="YYYY-MM-DD" className="w-28" />
+              <div className="w-36">
+                <InlineDateField value={s.date} onSave={(v) => v && onUpdate({ date: v })} ariaLabel="開始日" />
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="size-3.5 shrink-0 text-muted-foreground" />
-                <InlineTextField value={s.startTime ?? ""} onSave={(v) => onUpdate({ startTime: v || undefined })}
-                  ariaLabel="開始時刻" placeholder="09:00" className="w-16" />
+                <input
+                  type="time"
+                  value={s.startTime ?? ""}
+                  onChange={(e) => onUpdate({ startTime: e.target.value || undefined })}
+                  aria-label="開始時刻"
+                  className="h-8 w-24 rounded-md border border-input bg-card px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
+                />
               </div>
             </div>
           </InlineFieldRow>
 
           <InlineFieldRow label="終了日時">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <CalendarDays className="size-3.5 shrink-0 text-muted-foreground" />
-                <InlineTextField value={s.endDate ?? ""} onSave={(v) => onUpdate({ endDate: v || undefined })}
-                  ariaLabel="終了日" placeholder="YYYY-MM-DD（複数日可）" className="w-28" />
+              <div className="w-36">
+                <InlineDateField value={s.endDate ?? ""} onSave={(v) => onUpdate({ endDate: v || undefined })} ariaLabel="終了日" />
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="size-3.5 shrink-0 text-muted-foreground" />
-                <InlineTextField value={s.endTime ?? ""} onSave={(v) => onUpdate({ endTime: v || undefined })}
-                  ariaLabel="終了時刻" placeholder="10:00" className="w-16" />
+                <input
+                  type="time"
+                  value={s.endTime ?? ""}
+                  onChange={(e) => onUpdate({ endTime: e.target.value || undefined })}
+                  aria-label="終了時刻"
+                  className="h-8 w-24 rounded-md border border-input bg-card px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
+                />
               </div>
             </div>
           </InlineFieldRow>
