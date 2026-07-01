@@ -7,6 +7,7 @@ import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { googleTokens } from "@/db/schema";
 import { ensureSystemUser, SYSTEM_USER_ID } from "@/lib/system-user";
+import { getGoogleRedirectUri } from "@/lib/app-origin";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
@@ -26,8 +27,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/?gcal_error=config", request.url));
   }
 
-  const origin = new URL(request.url).origin;
-  const redirectUri = `${origin}/api/auth/google/callback`;
+  const redirectUri = getGoogleRedirectUri(request);
 
   const res = await fetch(TOKEN_URL, {
     method: "POST",
@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
   };
 
   if (!data.refresh_token) {
-    // refresh_token が含まれない場合、prompt=consent で再認証が必要
     return NextResponse.redirect(
       new URL("/?gcal_error=no_refresh_token", request.url),
     );

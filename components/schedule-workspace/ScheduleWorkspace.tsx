@@ -41,8 +41,9 @@ type Props = {
   initialData: ScheduleWorkspaceData;
 };
 
-// localStorage key: schedules/tasks は DB 管理に移行したため v4 に更新
+// localStorage key: DB 移行用（初回のみ migrate-local API へ送る）
 const LS_KEY = "schedule-workspace-v4";
+const LS_MIGRATED_KEY = "schedule-workspace-v5-migrated";
 
 // ===== API helpers (fire-and-forget) =====
 
@@ -71,43 +72,57 @@ function apiDelete(url: string): void {
 // ===== Component =====
 
 export function ScheduleWorkspace({ initialData }: Props) {
-  // schedules / tasks は DB から初期値を受け取る（localStorage は使わない）
   const [schedules, setSchedules] = useState<Schedule[]>(initialData.schedules);
   const [tasks, setTasks] = useState<DailyTask[]>(initialData.tasks);
-
-  // それ以外は localStorage から復元（なければ initialData の空配列）
-  const [savedIdeas, setSavedIdeas] = useState<SavedIdea[]>(() =>
-    loadLocalField(savedIdeaSchema, "savedIdeas", initialData.savedIdeas),
-  );
-  const [contacts, setContacts] = useState<Contact[]>(() =>
-    loadLocalField(contactSchema, "contacts", initialData.contacts),
-  );
-  const [projects, setProjects] = useState<Project[]>(() =>
-    loadLocalField(projectSchema, "projects", initialData.projects),
-  );
-  const [globalTags, setGlobalTags] = useState<string[]>(() =>
-    loadLocalField(z.string(), "globalTags", initialData.globalTags),
-  );
+  const [savedIdeas, setSavedIdeas] = useState<SavedIdea[]>(initialData.savedIdeas);
+  const [contacts, setContacts] = useState<Contact[]>(initialData.contacts);
+  const [projects, setProjects] = useState<Project[]>(initialData.projects);
+  const [globalTags, setGlobalTags] = useState<string[]>(initialData.globalTags);
 
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
 
-  // ── schedules/tasks 以外を localStorage に保存 ──────────────────────────
-  const storageWarnedRef = useRef(false);
+  // ── localStorage → DB 初回移行 ────────────────────────────────
+  const migratedRef = useRef(false);
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        LS_KEY,
-        JSON.stringify({ savedIdeas, contacts, projects, globalTags }),
-      );
-      storageWarnedRef.current = false;
-    } catch {
-      if (!storageWarnedRef.current) {
-        toast.warning("ローカルストレージへの保存に失敗しました。");
-        storageWarnedRef.current = true;
-      }
+    if (migratedRef.current) return;
+    migratedRef.current = true;
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem(LS_MIGRATED_KEY)) return;
+
+    const payload = readLocalStoragePayload();
+    const hasData =
+      payload.savedIdeas.length > 0 ||
+      payload.contacts.length > 0 ||
+      payload.projects.length > 0 ||
+      payload.globalTags.length > 0;
+    if (!hasData) {
+      localStorage.setItem(LS_MIGRATED_KEY, "1");
+      return;
     }
-  }, [savedIdeas, contacts, projects, globalTags]);
+
+    fetch("/api/migrate-local", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then((r) => r.json())
+      .then((data: {
+        projects?: Project[];
+        savedIdeas?: SavedIdea[];
+        contacts?: Contact[];
+        globalTags?: string[];
+      }) => {
+        if (data.projects) setProjects(data.projects);
+        if (data.savedIdeas) setSavedIdeas(data.savedIdeas);
+        if (data.contacts) setContacts(data.contacts);
+        if (data.globalTags) setGlobalTags(data.globalTags);
+        localStorage.removeItem(LS_KEY);
+        localStorage.setItem(LS_MIGRATED_KEY, "1");
+        toast.success("ローカルデータを DB に移行しました");
+      })
+      .catch(() => toast.warning("ローカルデータの DB 移行に失敗しました"));
+  }, []);
 
   // ── Derived ────────────────────────────────────────
 
@@ -145,11 +160,16 @@ export function ScheduleWorkspace({ initialData }: Props) {
     setContacts((prev) => {
       const map = new Map(prev.map((c) => [c.name, c]));
       for (const c of incoming) {
-        if (c.name.trim())
+        if (c.name.trim()) {
           map.set(c.name, {
             name: c.name,
             contact: c.contact ?? map.get(c.name)?.contact,
           });
+          apiPost("/api/contacts", {
+            name: c.name,
+            contact: c.contact ?? map.get(c.name)?.contact,
+          });
+        }
       }
       return Array.from(map.values());
     });
@@ -262,26 +282,36 @@ export function ScheduleWorkspace({ initialData }: Props) {
   // ── Ideas ──────────────────────────────────────────
 
   const saveIdea = useCallback((idea: Omit<SavedIdea, "id" | "tags">) => {
-    setSavedIdeas((prev) => [
-      { ...idea, id: `idea-${Date.now()}`, tags: [] },
-      ...prev,
-    ]);
+    const n: SavedIdea = {
+      ...idea,
+      id: crypto.randomUUID(),
+      tags: [],
+    };
+    setSavedIdeas((prev) => [n, ...prev]);
+    apiPost("/api/ideas", n);
   }, []);
 
   const updateIdea = useCallback((id: string, patch: Partial<SavedIdea>) => {
     setSavedIdeas((prev) =>
       prev.map((i) => (i.id === id ? { ...i, ...patch } : i)),
     );
+    apiPatch(`/api/ideas/${id}`, patch);
   }, []);
 
   const deleteIdea = useCallback((id: string) => {
     setSavedIdeas((prev) => prev.filter((i) => i.id !== id));
+    setSelectedItem((prev) =>
+      prev?.kind === "idea" && prev.data.id === id ? null : prev,
+    );
+    apiDelete(`/api/ideas/${id}`);
   }, []);
 
   // ── Projects ──────────────────────────────────────
 
   const addProject = useCallback((p: Omit<Project, "id">) => {
-    setProjects((prev) => [...prev, { ...p, id: `p-${Date.now()}` }]);
+    const n: Project = { ...p, id: crypto.randomUUID() };
+    setProjects((prev) => [...prev, n]);
+    apiPost("/api/projects", n);
   }, []);
 
   const updateProject = useCallback(
@@ -289,6 +319,7 @@ export function ScheduleWorkspace({ initialData }: Props) {
       setProjects((prev) =>
         prev.map((p) => (p.id === id ? { ...p, ...patch } : p)),
       );
+      apiPatch(`/api/projects/${id}`, patch);
     },
     [],
   );
@@ -298,6 +329,7 @@ export function ScheduleWorkspace({ initialData }: Props) {
     setSelectedItem((prev) =>
       prev?.kind === "project" && prev.data.id === id ? null : prev,
     );
+    apiDelete(`/api/projects/${id}`);
   }, []);
 
   // ── Global Tags ───────────────────────────────────
@@ -305,12 +337,14 @@ export function ScheduleWorkspace({ initialData }: Props) {
   const addGlobalTag = useCallback((tag: string) => {
     setGlobalTags((prev) => {
       if (prev.includes(tag) || prev.length >= 20) return prev;
+      apiPost("/api/tags", { name: tag });
       return [...prev, tag];
     });
   }, []);
 
   const deleteGlobalTag = useCallback((tag: string) => {
     setGlobalTags((prev) => prev.filter((t) => t !== tag));
+    apiDelete(`/api/tags?name=${encodeURIComponent(tag)}`);
   }, []);
 
   // ── Date selection ────────────────────────────────
@@ -419,22 +453,41 @@ function ResizeHandle() {
   );
 }
 
-// ── localStorage ヘルパー（schedules/tasks 以外のフィールドのみ復元） ────────
+// ── localStorage ヘルパー（初回 DB 移行用） ────────────────────────────────
 
-function loadLocalField<T>(
-  schema: z.ZodType<T>,
-  key: string,
-  fallback: T[],
-): T[] {
-  if (typeof window === "undefined") return fallback;
+function readLocalStoragePayload(): {
+  savedIdeas: SavedIdea[];
+  contacts: Contact[];
+  projects: Project[];
+  globalTags: string[];
+} {
+  const empty = {
+    savedIdeas: [] as SavedIdea[],
+    contacts: [] as Contact[],
+    projects: [] as Project[],
+    globalTags: [] as string[],
+  };
+  if (typeof window === "undefined") return empty;
   try {
     const stored = localStorage.getItem(LS_KEY);
-    if (!stored) return fallback;
+    if (!stored) return empty;
     const raw = JSON.parse(stored) as Record<string, unknown>;
-    const result = z.array(schema).safeParse(raw[key]);
-    return result.success ? result.data : fallback;
+    return {
+      savedIdeas: z.array(savedIdeaSchema).safeParse(raw.savedIdeas).success
+        ? z.array(savedIdeaSchema).parse(raw.savedIdeas)
+        : [],
+      contacts: z.array(contactSchema).safeParse(raw.contacts).success
+        ? z.array(contactSchema).parse(raw.contacts)
+        : [],
+      projects: z.array(projectSchema).safeParse(raw.projects).success
+        ? z.array(projectSchema).parse(raw.projects)
+        : [],
+      globalTags: z.array(z.string()).safeParse(raw.globalTags).success
+        ? z.array(z.string()).parse(raw.globalTags)
+        : [],
+    };
   } catch {
-    return fallback;
+    return empty;
   }
 }
 

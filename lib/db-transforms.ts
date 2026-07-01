@@ -2,11 +2,21 @@
  * DB レコード（Drizzle の infer 型）← → アプリ型（schedule-schema）の変換ユーティリティ。
  */
 import type { InferSelectModel } from "drizzle-orm";
-import type { schedules, tasks } from "@/db/schema";
-import type { Schedule, DailyTask, Priority } from "@/lib/schedule-schema";
+import type { schedules, tasks, projects, ideas, contacts } from "@/db/schema";
+import type {
+  Schedule,
+  DailyTask,
+  Project,
+  SavedIdea,
+  Contact,
+  Priority,
+} from "@/lib/schedule-schema";
 
 type DbSchedule = InferSelectModel<typeof schedules>;
 type DbTask = InferSelectModel<typeof tasks>;
+type DbProject = InferSelectModel<typeof projects>;
+type DbIdea = InferSelectModel<typeof ideas>;
+type DbContact = InferSelectModel<typeof contacts>;
 
 function parseJson<T>(json: string | null | undefined, fallback: T): T {
   if (!json) return fallback;
@@ -49,5 +59,39 @@ export function dbToTask(row: DbTask): DailyTask {
     imageUrl: row.imageUrl ?? undefined,
     projectId: row.projectId ?? undefined,
     tags: parseJson(row.tagsJson, []),
+  };
+}
+
+export function dbToProject(row: DbProject): Project {
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color ?? undefined,
+    startDate: row.startDate ?? undefined,
+    endDate: row.endDate ?? undefined,
+    summary: row.summary ?? undefined,
+    goal: row.goal ?? undefined,
+    note: row.note ?? undefined,
+    imageUrl: row.imageUrl ?? undefined,
+    urls: parseJson(row.urlsJson, []),
+  };
+}
+
+export function dbToIdea(row: DbIdea): SavedIdea {
+  return {
+    id: row.id,
+    content: row.content,
+    aiResponse: row.aiResponse ?? undefined,
+    category: row.category ?? undefined,
+    createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
+    projectId: row.projectId ?? undefined,
+    tags: parseJson(row.tagsJson, []),
+  };
+}
+
+export function dbToContact(row: DbContact): Contact {
+  return {
+    name: row.name,
+    contact: row.contactInfo ?? undefined,
   };
 }

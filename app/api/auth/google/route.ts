@@ -4,6 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getGoogleRedirectUri } from "@/lib/app-origin";
 
 const SCOPES = ["https://www.googleapis.com/auth/calendar.events"].join(" ");
 
@@ -16,8 +17,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const origin = new URL(request.url).origin;
-  const redirectUri = `${origin}/api/auth/google/callback`;
+  const redirectUri = getGoogleRedirectUri(request);
 
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.set("client_id", clientId);
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", SCOPES);
   url.searchParams.set("access_type", "offline");
-  url.searchParams.set("prompt", "consent"); // refresh_token を毎回取得
+  url.searchParams.set("prompt", "consent");
 
   return NextResponse.redirect(url.toString());
 }

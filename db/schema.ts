@@ -35,6 +35,8 @@ export const projects = pgTable("projects", {
   summary:   text("summary"),
   goal:      text("goal"),
   note:      text("note"),
+  imageUrl:  text("image_url"),
+  urlsJson:  text("urls_json").default("[]").notNull(),
   startDate: date("start_date"),
   endDate:   date("end_date"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -93,6 +95,7 @@ export const ideas = pgTable("ideas", {
   content:    text("content").notNull(),
   aiResponse: text("ai_response"),
   category:   varchar("category", { length: 50 }),
+  tagsJson:   text("tags_json").default("[]").notNull(),
   createdAt:  timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

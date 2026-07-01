@@ -501,13 +501,22 @@ function TagsSection({
 
 type GCalStatus = "loading" | "not-configured" | "disconnected" | "connected";
 
+type GCalStatusResponse = {
+  connected: boolean;
+  configured: boolean;
+  appOrigin?: string;
+  redirectUri?: string;
+};
+
 function GoogleCalendarSection() {
   const [status, setStatus] = useState<GCalStatus>("loading");
+  const [redirectUri, setRedirectUri] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/google/status")
       .then((r) => r.json())
-      .then((data: { connected: boolean; configured: boolean }) => {
+      .then((data: GCalStatusResponse) => {
+        if (data.redirectUri) setRedirectUri(data.redirectUri);
         if (!data.configured) setStatus("not-configured");
         else if (data.connected) setStatus("connected");
         else setStatus("disconnected");
@@ -553,6 +562,14 @@ function GoogleCalendarSection() {
           <p className="text-xs text-sidebar-foreground/50">
             予定を Google Calendar と自動同期します
           </p>
+          {redirectUri && (
+            <p className="rounded-md border border-border bg-muted/30 px-2 py-1.5 text-[10px] leading-relaxed text-sidebar-foreground/50">
+              Google Cloud Console の「承認済みのリダイレクト URI」に以下を登録してください:
+              <span className="mt-1 block break-all font-mono text-sidebar-foreground/70">
+                {redirectUri}
+              </span>
+            </p>
+          )}
           <Button
             type="button"
             variant="outline"
